@@ -2,14 +2,8 @@
 # ==================================
 # Install with: pip install -r requirements.txt
 
-# UI Framework
 PyQt5>=5.15.0
-
-# Excel handling
 openpyxl>=3.1.0
-
-# Outlook COM automation (Windows only)
 pywin32>=306
 
-# Optional: For creating standalone executable
 # pyinstaller>=6.0.0
