@@ -9,7 +9,7 @@ from typing import Optional, List, Dict, Any
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox,
     QPushButton, QLabel, QComboBox, QTextBrowser,
-    QSplitter, QListWidget, QListWidgetItem
+    QSplitter, QListWidget, QListWidgetItem, QLineEdit
 )
 from PyQt5.QtCore import Qt, pyqtSignal
 
@@ -41,6 +41,10 @@ class TabPreview(QWidget):
         self._selected_indices: List[int] = []
         self._email_builder: Optional[EmailBuilder] = None
         self._current_index: int = 0
+        self._columns: List[str] = []
+        self._email_column: str = ""
+        self._name_column: Optional[str] = None
+        self._identifier_column: Optional[str] = None
         
         self._setup_ui()
     
@@ -70,6 +74,41 @@ class TabPreview(QWidget):
         nav_layout.addWidget(self.position_label)
         
         layout.addLayout(nav_layout)
+        
+        # Display format row
+        format_layout = QHBoxLayout()
+        
+        format_label = QLabel("Display as:")
+        format_layout.addWidget(format_label)
+        
+        self.format_combo = QComboBox()
+        self.format_combo.addItem("Email only", "email")
+        self.format_combo.addItem("Name (Email)", "name_email")
+        self.format_combo.addItem("Identifier - Email", "id_email")
+        self.format_combo.addItem("Custom...", "custom")
+        self.format_combo.currentIndexChanged.connect(self._on_format_changed)
+        format_layout.addWidget(self.format_combo)
+        
+        format_layout.addSpacing(10)
+        
+        self.custom_format_label = QLabel("Format:")
+        self.custom_format_label.setVisible(False)
+        format_layout.addWidget(self.custom_format_label)
+        
+        self.custom_format_input = QLineEdit()
+        self.custom_format_input.setPlaceholderText("e.g., {Name} <{Email}>")
+        self.custom_format_input.setVisible(False)
+        self.custom_format_input.setMinimumWidth(200)
+        self.custom_format_input.editingFinished.connect(self._refresh_recipient_list)
+        format_layout.addWidget(self.custom_format_input)
+        
+        format_layout.addStretch()
+        
+        self.refresh_btn = QPushButton("Refresh Preview")
+        self.refresh_btn.clicked.connect(self._refresh_current)
+        format_layout.addWidget(self.refresh_btn)
+        
+        layout.addLayout(format_layout)
         
         # Main content splitter
         splitter = QSplitter(Qt.Horizontal)
@@ -158,7 +197,10 @@ class TabPreview(QWidget):
         self,
         data: List[Dict[str, Any]],
         selected_indices: List[int],
-        email_column: str
+        email_column: str,
+        columns: List[str] = None,
+        name_column: str = None,
+        identifier_column: str = None
     ) -> None:
         """
         Set data for preview.
@@ -167,22 +209,27 @@ class TabPreview(QWidget):
             data: All data rows
             selected_indices: Indices of selected recipients
             email_column: Name of email column for display
+            columns: All available columns
+            name_column: Column containing name
+            identifier_column: Column containing identifier
         """
         self._data = data
         self._selected_indices = selected_indices
         self._current_index = 0
+        self._email_column = email_column
+        self._columns = columns or []
+        self._name_column = name_column
+        self._identifier_column = identifier_column
+        
+        # Auto-detect name column if not provided
+        if not self._name_column and columns:
+            for col in columns:
+                if col.lower() in ['name', 'client name', 'customer', 'party', 'party name']:
+                    self._name_column = col
+                    break
         
         # Populate recipient dropdown
-        self.recipient_combo.blockSignals(True)
-        self.recipient_combo.clear()
-        
-        for idx in selected_indices:
-            if idx < len(data):
-                row = data[idx]
-                email = str(row.get(email_column, f"Row {idx + 1}"))
-                self.recipient_combo.addItem(f"{idx + 1}. {email}", idx)
-        
-        self.recipient_combo.blockSignals(False)
+        self._refresh_recipient_list()
         
         # Update display
         if selected_indices:
@@ -191,6 +238,76 @@ class TabPreview(QWidget):
             self._clear_preview()
         
         self._update_navigation()
+    
+    def _on_format_changed(self, index: int) -> None:
+        """Handle display format change."""
+        format_type = self.format_combo.itemData(index)
+        
+        # Show/hide custom format input
+        is_custom = (format_type == "custom")
+        self.custom_format_label.setVisible(is_custom)
+        self.custom_format_input.setVisible(is_custom)
+        
+        if not is_custom:
+            self._refresh_recipient_list()
+    
+    def _refresh_recipient_list(self) -> None:
+        """Refresh the recipient dropdown with current format."""
+        current_idx = self._current_index
+        
+        self.recipient_combo.blockSignals(True)
+        self.recipient_combo.clear()
+        
+        format_type = self.format_combo.currentData()
+        
+        for idx in self._selected_indices:
+            if idx < len(self._data):
+                row = self._data[idx]
+                display_text = self._format_recipient(row, idx, format_type)
+                self.recipient_combo.addItem(display_text, idx)
+        
+        # Restore selection
+        if current_idx < self.recipient_combo.count():
+            self.recipient_combo.setCurrentIndex(current_idx)
+        
+        self.recipient_combo.blockSignals(False)
+    
+    def _format_recipient(self, row: Dict[str, Any], idx: int, format_type: str) -> str:
+        """Format a recipient for display in dropdown."""
+        email = str(row.get(self._email_column, f"Row {idx + 1}"))
+        
+        if format_type == "email":
+            return f"{idx + 1}. {email}"
+        
+        elif format_type == "name_email":
+            name = ""
+            if self._name_column:
+                name = str(row.get(self._name_column, "")).strip()
+            if name:
+                return f"{idx + 1}. {name} ({email})"
+            return f"{idx + 1}. {email}"
+        
+        elif format_type == "id_email":
+            identifier = ""
+            if self._identifier_column:
+                identifier = str(row.get(self._identifier_column, "")).strip()
+            if identifier:
+                return f"{idx + 1}. {identifier} - {email}"
+            return f"{idx + 1}. {email}"
+        
+        elif format_type == "custom":
+            custom_fmt = self.custom_format_input.text().strip()
+            if custom_fmt:
+                # Replace {ColumnName} with values
+                result = custom_fmt
+                for col in self._columns:
+                    placeholder = "{" + col + "}"
+                    value = str(row.get(col, "")).strip()
+                    result = result.replace(placeholder, value)
+                return f"{idx + 1}. {result}"
+            return f"{idx + 1}. {email}"
+        
+        return f"{idx + 1}. {email}"
     
     def _show_preview(self, combo_index: int) -> None:
         """

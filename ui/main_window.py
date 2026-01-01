@@ -234,6 +234,7 @@ class MainWindow(QMainWindow):
     def _update_preview(self) -> None:
         """Update preview tab with current data."""
         data = self.tab_excel.get_data()
+        columns = self.tab_excel.get_columns()
         selected_indices = self.tab_recipients.get_selected_indices()
         mapping = self.tab_excel.get_column_mapping()
         
@@ -241,7 +242,10 @@ class MainWindow(QMainWindow):
         self.tab_preview.set_preview_data(
             data,
             selected_indices,
-            mapping.get('to', '')
+            mapping.get('to', ''),
+            columns=columns,
+            name_column=None,  # Will auto-detect
+            identifier_column=mapping.get('identifier')
         )
     
     def _update_send_tab(self) -> None:

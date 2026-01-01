@@ -9,15 +9,17 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox,
     QPushButton, QLabel, QComboBox, QTableWidget,
     QTableWidgetItem, QHeaderView, QFileDialog,
-    QMessageBox, QSplitter, QFrame
+    QMessageBox, QSplitter, QFrame, QSpinBox
 )
 from PyQt5.QtCore import Qt, pyqtSignal
 
 from core.excel_handler import ExcelHandler
-from ui.components.dialogs import show_error, show_info, show_file_dialog
+from ui.components.dialogs import show_error, show_info, show_file_dialog, show_save_dialog
 from utils import get_logger
 
 import config
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment
 
 
 class TabExcel(QWidget):
@@ -92,6 +94,44 @@ class TabExcel(QWidget):
         sheet_layout.addWidget(self.row_count_label)
         
         file_layout.addLayout(sheet_layout)
+        
+        # Data offset row (for data not starting at A1)
+        offset_layout = QHBoxLayout()
+        
+        offset_label = QLabel("Data starts at:")
+        offset_layout.addWidget(offset_label)
+        
+        offset_layout.addWidget(QLabel("Row:"))
+        self.start_row_spin = QSpinBox()
+        self.start_row_spin.setRange(1, 1000)
+        self.start_row_spin.setValue(1)
+        self.start_row_spin.setToolTip("Row number where headers are (1 = first row)")
+        offset_layout.addWidget(self.start_row_spin)
+        
+        offset_layout.addSpacing(10)
+        
+        offset_layout.addWidget(QLabel("Column:"))
+        self.start_col_spin = QSpinBox()
+        self.start_col_spin.setRange(1, 100)
+        self.start_col_spin.setValue(1)
+        self.start_col_spin.setToolTip("Column number where data starts (1 = A, 2 = B, etc.)")
+        offset_layout.addWidget(self.start_col_spin)
+        
+        offset_layout.addSpacing(20)
+        
+        self.apply_offset_btn = QPushButton("Apply")
+        self.apply_offset_btn.clicked.connect(self._reload_with_offset)
+        self.apply_offset_btn.setEnabled(False)
+        offset_layout.addWidget(self.apply_offset_btn)
+        
+        offset_layout.addStretch()
+        
+        # Export template button
+        self.export_template_btn = QPushButton("Export Blank Template")
+        self.export_template_btn.clicked.connect(self._export_template)
+        offset_layout.addWidget(self.export_template_btn)
+        
+        file_layout.addLayout(offset_layout)
         
         layout.addWidget(file_group)
         
@@ -238,6 +278,7 @@ class TabExcel(QWidget):
         # Enable buttons
         self.reload_btn.setEnabled(True)
         self.validate_btn.setEnabled(True)
+        self.apply_offset_btn.setEnabled(True)
         
         # Load data from first sheet
         self._load_sheet_data()
@@ -483,6 +524,117 @@ class TabExcel(QWidget):
             True if data is loaded
         """
         return len(self._data) > 0
+    
+    def _reload_with_offset(self) -> None:
+        """Reload current file with specified row/column offset."""
+        if not self._file_path:
+            show_error(self, "Error", "No file loaded.")
+            return
+        
+        start_row = self.start_row_spin.value()
+        start_col = self.start_col_spin.value()
+        
+        # Load with offset
+        sheet_name = self.sheet_combo.currentText() if self.sheet_combo.currentIndex() >= 0 else None
+        success, error = self.excel_handler.load_file_with_offset(
+            self._file_path, 
+            sheet_name,
+            start_row=start_row,
+            start_col=start_col
+        )
+        
+        if success:
+            self._load_sheet_data()
+            show_info(self, "Reloaded", f"Data reloaded starting from row {start_row}, column {start_col}.")
+        else:
+            show_error(self, "Error", error)
+    
+    def _export_template(self) -> None:
+        """Export a blank Excel template with sample structure."""
+        save_path = show_save_dialog(
+            self,
+            "Save Excel Template",
+            "Excel Files (*.xlsx)",
+            default_name="email_template.xlsx"
+        )
+        
+        if not save_path:
+            return
+        
+        try:
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Recipients"
+            
+            # Header styling
+            header_font = Font(bold=True, color="FFFFFF")
+            header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+            header_align = Alignment(horizontal="center", vertical="center")
+            
+            # Headers
+            headers = ["Name", "Email", "CC", "Identifier", "Custom1", "Custom2"]
+            for col, header in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=col, value=header)
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = header_align
+            
+            # Sample data
+            sample_data = [
+                ["John Doe", "john@example.com", "", "PAN001", "Value1", "Value2"],
+                ["Jane Smith", "jane@example.com", "manager@example.com", "PAN002", "Value1", "Value2"],
+                ["", "", "", "", "", ""],
+            ]
+            
+            for row_idx, row_data in enumerate(sample_data, 2):
+                for col_idx, value in enumerate(row_data, 1):
+                    ws.cell(row=row_idx, column=col_idx, value=value)
+            
+            # Adjust column widths
+            column_widths = [20, 30, 30, 15, 15, 15]
+            for col, width in enumerate(column_widths, 1):
+                ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = width
+            
+            # Add instructions sheet
+            ws_help = wb.create_sheet(title="Instructions")
+            instructions = [
+                ["Advanced Email Tool - Template Instructions"],
+                [""],
+                ["Required Columns:"],
+                ["- Email: Recipient email address (required)"],
+                [""],
+                ["Optional Columns:"],
+                ["- Name: Recipient name (use in email as {Name})"],
+                ["- CC: CC email address"],
+                ["- Identifier: For matching attachments (e.g., PAN, Client Code)"],
+                ["- Custom columns: Any additional data to use as {ColumnName} in templates"],
+                [""],
+                ["Tips:"],
+                ["- First row must be headers"],
+                ["- Multiple emails in one cell: separate with semicolon (;)"],
+                ["- Variables in email template use format: {ColumnName}"],
+                ["- Identifier is matched as substring in filenames"],
+            ]
+            
+            for row_idx, row in enumerate(instructions, 1):
+                cell = ws_help.cell(row=row_idx, column=1, value=row[0] if row else "")
+                if row_idx == 1:
+                    cell.font = Font(bold=True, size=14)
+                elif row and row[0].endswith(":"):
+                    cell.font = Font(bold=True)
+            
+            ws_help.column_dimensions["A"].width = 70
+            
+            # Save
+            wb.save(save_path)
+            wb.close()
+            
+            show_info(self, "Template Exported", f"Template saved to:\n{save_path}")
+            self.logger.info(f"Template exported to: {save_path}")
+            
+        except Exception as e:
+            show_error(self, "Export Error", f"Could not export template: {e}")
+            self.logger.error(f"Template export error: {e}")
     
     def load_file_path(self, file_path: str) -> bool:
         """

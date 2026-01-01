@@ -77,6 +77,13 @@ class TabCompose(QWidget):
         self.delete_btn.clicked.connect(self._delete_template)
         template_layout.addWidget(self.delete_btn)
         
+        template_layout.addSpacing(20)
+        
+        self.import_btn = QPushButton("Import File...")
+        self.import_btn.setToolTip("Import content from Word (.docx) or Text (.txt) file")
+        self.import_btn.clicked.connect(self._import_file)
+        template_layout.addWidget(self.import_btn)
+        
         template_layout.addStretch()
         
         layout.addLayout(template_layout)
@@ -356,3 +363,126 @@ class TabCompose(QWidget):
             return False, f"Missing columns: {', '.join(report['missing_variables'])}"
         
         return True, ""
+    
+    def _import_file(self) -> None:
+        """Import content from Word (.docx) or Text (.txt) file."""
+        from PyQt5.QtWidgets import QFileDialog
+        
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Import File",
+            "",
+            "Supported Files (*.docx *.txt *.html *.htm);;Word Documents (*.docx);;Text Files (*.txt);;HTML Files (*.html *.htm);;All Files (*.*)"
+        )
+        
+        if not file_path:
+            return
+        
+        try:
+            import os
+            ext = os.path.splitext(file_path)[1].lower()
+            
+            content = ""
+            
+            if ext == '.docx':
+                content = self._read_docx(file_path)
+            elif ext == '.txt':
+                content = self._read_txt(file_path)
+            elif ext in ['.html', '.htm']:
+                content = self._read_html(file_path)
+            else:
+                show_warning(self, "Unsupported", f"File type '{ext}' is not supported.")
+                return
+            
+            if content:
+                # Ask how to import
+                reply = QMessageBox.question(
+                    self,
+                    "Import Content",
+                    "How would you like to import this content?\n\n"
+                    "Yes = Replace current body\n"
+                    "No = Append to current body",
+                    QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
+                )
+                
+                if reply == QMessageBox.Yes:
+                    self.body_editor.set_html(content)
+                elif reply == QMessageBox.No:
+                    current = self.body_editor.get_html()
+                    self.body_editor.set_html(current + "<br><br>" + content)
+                # Cancel = do nothing
+                
+                if reply != QMessageBox.Cancel:
+                    self.logger.info(f"Imported content from: {file_path}")
+                    show_info(self, "Imported", "Content imported successfully.")
+            
+        except Exception as e:
+            show_error(self, "Import Error", f"Could not import file:\n{e}")
+            self.logger.error(f"Import error: {e}")
+    
+    def _read_docx(self, file_path: str) -> str:
+        """Read content from a Word document."""
+        try:
+            # Try using python-docx
+            import docx
+            doc = docx.Document(file_path)
+            
+            html_parts = []
+            for para in doc.paragraphs:
+                if para.text.strip():
+                    html_parts.append(f"<p>{para.text}</p>")
+            
+            return "\n".join(html_parts)
+        except ImportError:
+            # python-docx not installed, try basic extraction
+            show_warning(
+                self, 
+                "Limited Support",
+                "python-docx not installed. Install it for better Word support:\n"
+                "pip install python-docx"
+            )
+            return ""
+    
+    def _read_txt(self, file_path: str) -> str:
+        """Read content from a text file."""
+        # Try different encodings
+        encodings = ['utf-8', 'utf-8-sig', 'cp1252', 'latin-1']
+        
+        for encoding in encodings:
+            try:
+                with open(file_path, 'r', encoding=encoding) as f:
+                    text = f.read()
+                # Convert plain text to HTML paragraphs
+                paragraphs = text.split('\n\n')
+                html_parts = []
+                for para in paragraphs:
+                    para = para.strip()
+                    if para:
+                        # Replace single newlines with <br>
+                        para = para.replace('\n', '<br>')
+                        html_parts.append(f"<p>{para}</p>")
+                return "\n".join(html_parts)
+            except UnicodeDecodeError:
+                continue
+        
+        raise ValueError("Could not decode file with any supported encoding")
+    
+    def _read_html(self, file_path: str) -> str:
+        """Read content from an HTML file."""
+        encodings = ['utf-8', 'utf-8-sig', 'cp1252', 'latin-1']
+        
+        for encoding in encodings:
+            try:
+                with open(file_path, 'r', encoding=encoding) as f:
+                    content = f.read()
+                
+                # Try to extract just the body content
+                import re
+                body_match = re.search(r'<body[^>]*>(.*?)</body>', content, re.DOTALL | re.IGNORECASE)
+                if body_match:
+                    return body_match.group(1)
+                return content
+            except UnicodeDecodeError:
+                continue
+        
+        raise ValueError("Could not decode file with any supported encoding")
