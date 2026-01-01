@@ -63,12 +63,14 @@ desktop.ini
 # =============================================================================
 # Application Data (User-specific, should not be in repo)
 # =============================================================================
+# Main app data folder (contains all user data)
+.app_data/
+
 # Sessions and checkpoints
 sessions/
 checkpoints/
 *.session
 *.checkpoint
-*.app_data
 
 # Logs
 logs/

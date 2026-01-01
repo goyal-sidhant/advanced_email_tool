@@ -22,7 +22,27 @@ class TemplateEngine:
     def __init__(self):
         """Initialize the template engine."""
         self.logger = get_logger()
-        self.variable_pattern = re.compile(r'\{([^}]+)\}')
+        # Match {VariableName} but NOT CSS like { white-space: pre-wrap; }
+        # Valid variable: starts with letter/underscore, can contain letters/numbers/underscore/space
+        # Must NOT contain : or ; (CSS indicators)
+        self.variable_pattern = re.compile(r'\{([A-Za-z_][A-Za-z0-9_ ]*)\}')
+    
+    def _is_valid_variable(self, var_name: str) -> bool:
+        """
+        Check if a string looks like a valid variable name.
+        
+        Filters out CSS properties like 'white-space: pre-wrap'
+        """
+        # CSS indicators - these are NOT variables
+        if ':' in var_name or ';' in var_name:
+            return False
+        # Empty or whitespace-only
+        if not var_name or not var_name.strip():
+            return False
+        # Starts/ends with whitespace (CSS formatting)
+        if var_name != var_name.strip():
+            return False
+        return True
     
     def substitute(
         self, 

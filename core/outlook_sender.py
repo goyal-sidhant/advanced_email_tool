@@ -53,8 +53,14 @@ class OutlookSender:
             
             self.logger.info("Initializing Outlook connection...")
             
-            # Connect to Outlook
-            self.outlook = win32com.client.Dispatch("Outlook.Application")
+            # Use EnsureDispatch for more stable COM connection
+            # This generates Python wrappers for better reliability
+            try:
+                self.outlook = win32com.client.gencache.EnsureDispatch("Outlook.Application")
+            except Exception:
+                # Fallback to regular Dispatch if gencache fails
+                self.outlook = win32com.client.Dispatch("Outlook.Application")
+            
             self.namespace = self.outlook.GetNamespace("MAPI")
             
             # Load accounts
@@ -74,6 +80,20 @@ class OutlookSender:
             else:
                 self.logger.error(f"Outlook initialization failed: {e}", exc_info=True)
                 return False, f"Failed to connect to Outlook: {e}"
+    
+    def _get_fresh_outlook(self):
+        """
+        Get a fresh Outlook Application object.
+        
+        This helps avoid stale COM connection issues.
+        """
+        import win32com.client
+        try:
+            # Try EnsureDispatch first
+            return win32com.client.gencache.EnsureDispatch("Outlook.Application")
+        except Exception:
+            # Fallback to Dispatch
+            return win32com.client.Dispatch("Outlook.Application")
     
     def _load_accounts(self) -> None:
         """Load available email accounts from Outlook."""
@@ -183,13 +203,17 @@ class OutlookSender:
             return False, "No recipients specified"
         
         try:
+            # Get fresh Outlook connection to avoid stale COM issues
+            outlook = self._get_fresh_outlook()
+            namespace = outlook.GetNamespace("MAPI")
+            
             # Create mail item
-            mail = self.outlook.CreateItem(0)  # 0 = olMailItem
+            mail = outlook.CreateItem(0)  # 0 = olMailItem
             
             # Set sender account if specified
             if self.selected_account:
                 try:
-                    accounts = self.namespace.Accounts
+                    accounts = namespace.Accounts
                     mail._oleobj_.Invoke(
                         *(64209, 0, 8, 0, 
                           accounts.Item(self.selected_account.index))
