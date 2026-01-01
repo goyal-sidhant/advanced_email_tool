@@ -17,9 +17,11 @@ APP_AUTHOR = "Sidhant"
 # =============================================================================
 # PATHS
 # =============================================================================
-# User data directory (stores templates, sessions, logs)
-USER_HOME = Path.home()
-USER_DATA_DIR = USER_HOME / ".advanced_email_tool"
+# Application directory (where the code is located)
+APP_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
+
+# Data directory - SAME folder as the code (portable app style)
+USER_DATA_DIR = APP_DIR / ".app_data"
 
 # Subdirectories
 TEMPLATES_DIR = USER_DATA_DIR / "templates"
@@ -105,6 +107,13 @@ DEFAULT_RECURSIVE_SEARCH = False
 
 # File extensions to include in matching (empty = all files)
 ATTACHMENT_FILE_EXTENSIONS = []  # e.g., ['.pdf', '.xlsx', '.docx']
+
+# =============================================================================
+# FILE DIALOG FILTERS
+# =============================================================================
+EXCEL_FILTER = "Excel Files (*.xlsx *.xlsm);;All Files (*.*)"
+ALL_FILES_FILTER = "All Files (*.*)"
+PDF_FILTER = "PDF Files (*.pdf);;All Files (*.*)"
 
 # =============================================================================
 # LOGGING SETTINGS
