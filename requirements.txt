@@ -5,5 +5,7 @@
 PyQt5>=5.15.0
 openpyxl>=3.1.0
 pywin32>=306
+python-docx>=1.1.0
 
+# Optional: For creating standalone executable
 # pyinstaller>=6.0.0
