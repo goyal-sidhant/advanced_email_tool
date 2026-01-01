@@ -185,19 +185,29 @@ class TabExcel(QWidget):
         separator.setStyleSheet("color: #ddd;")
         mapping_layout.addWidget(separator)
         
-        # Identifier (for attachment matching)
-        id_layout = QHBoxLayout()
-        id_label = QLabel("Identifier:")
-        id_label.setFixedWidth(100)
-        id_layout.addWidget(id_label)
+        # Identifier 1 (for attachment matching)
+        id1_layout = QHBoxLayout()
+        id1_label = QLabel("Identifier 1:")
+        id1_label.setFixedWidth(100)
+        id1_layout.addWidget(id1_label)
         self.identifier_combo = QComboBox()
         self.identifier_combo.currentIndexChanged.connect(self._on_mapping_changed)
-        id_layout.addWidget(self.identifier_combo)
-        mapping_layout.addLayout(id_layout)
+        id1_layout.addWidget(self.identifier_combo)
+        mapping_layout.addLayout(id1_layout)
+        
+        # Identifier 2 (optional, for additional matching)
+        id2_layout = QHBoxLayout()
+        id2_label = QLabel("Identifier 2:")
+        id2_label.setFixedWidth(100)
+        id2_layout.addWidget(id2_label)
+        self.identifier2_combo = QComboBox()
+        self.identifier2_combo.currentIndexChanged.connect(self._on_mapping_changed)
+        id2_layout.addWidget(self.identifier2_combo)
+        mapping_layout.addLayout(id2_layout)
         
         id_help = QLabel(
-            "Used to match files to recipients.\n"
-            "e.g., Client Code, PAN, GSTIN"
+            "Match files by ANY identifier.\n"
+            "e.g., PAN + Client Code"
         )
         id_help.setStyleSheet("color: gray; font-size: 10px;")
         mapping_layout.addWidget(id_help)
@@ -317,7 +327,7 @@ class TabExcel(QWidget):
     def _populate_column_combos(self) -> None:
         """Populate column mapping dropdowns."""
         # Block signals during population
-        combos = [self.to_combo, self.cc_combo, self.bcc_combo, self.identifier_combo]
+        combos = [self.to_combo, self.cc_combo, self.bcc_combo, self.identifier_combo, self.identifier2_combo]
         for combo in combos:
             combo.blockSignals(True)
             combo.clear()
@@ -326,6 +336,7 @@ class TabExcel(QWidget):
         self.cc_combo.addItem("-- None --")
         self.bcc_combo.addItem("-- None --")
         self.identifier_combo.addItem("-- None --")
+        self.identifier2_combo.addItem("-- None --")
         
         # Add columns
         for col in self._columns:
@@ -458,6 +469,7 @@ class TabExcel(QWidget):
             'cc': get_value(self.cc_combo),
             'bcc': get_value(self.bcc_combo),
             'identifier': get_value(self.identifier_combo),
+            'identifier2': get_value(self.identifier2_combo),
         }
     
     def set_column_mapping(self, mapping: Dict[str, Optional[str]]) -> None:

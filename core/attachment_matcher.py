@@ -157,6 +157,39 @@ class AttachmentMatcher:
                 results[str(identifier).strip()] = self.match_identifier(identifier)
         return results
     
+    def match_multiple_identifiers(
+        self, 
+        identifiers: List[str]
+    ) -> List[Tuple[str, str, int]]:
+        """
+        Find files matching ANY of the given identifiers (OR logic).
+        
+        Args:
+            identifiers: List of identifiers to search for
+            
+        Returns:
+            List of unique matched files (full_path, filename, size_bytes)
+        """
+        if not identifiers:
+            return []
+        
+        # Collect all matches, avoiding duplicates
+        seen_paths = set()
+        all_matches = []
+        
+        for identifier in identifiers:
+            if not identifier:
+                continue
+            
+            matches = self.match_identifier(str(identifier))
+            for match in matches:
+                full_path = match[0]
+                if full_path not in seen_paths:
+                    seen_paths.add(full_path)
+                    all_matches.append(match)
+        
+        return all_matches
+    
     def get_match_statistics(
         self, 
         identifiers: List[str]

@@ -7,10 +7,10 @@ Main application window coordinating all tabs.
 from typing import Optional, Dict, Any
 from PyQt5.QtWidgets import (
     QMainWindow, QTabWidget, QWidget, QVBoxLayout,
-    QStatusBar, QMenuBar, QMenu, QAction, QMessageBox
+    QStatusBar, QMenuBar, QMenu, QAction, QMessageBox, QShortcut
 )
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QCloseEvent
+from PyQt5.QtGui import QCloseEvent, QKeySequence
 
 from ui.tab_excel import TabExcel
 from ui.tab_compose import TabCompose
@@ -51,6 +51,7 @@ class MainWindow(QMainWindow):
         self._setup_menu()
         self._setup_tabs()
         self._setup_status_bar()
+        self._setup_shortcuts()
         self._connect_signals()
         self._setup_auto_save()
         
@@ -130,6 +131,50 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self.status_bar)
         self.status_bar.showMessage("Ready")
     
+    def _setup_shortcuts(self) -> None:
+        """Set up keyboard shortcuts."""
+        # Tab navigation: Ctrl+1 to Ctrl+6
+        for i in range(6):
+            shortcut = QShortcut(QKeySequence(f"Ctrl+{i+1}"), self)
+            shortcut.activated.connect(lambda idx=i: self.tab_widget.setCurrentIndex(idx))
+        
+        # Next tab: Ctrl+Tab
+        next_tab = QShortcut(QKeySequence("Ctrl+Tab"), self)
+        next_tab.activated.connect(self._next_tab)
+        
+        # Previous tab: Ctrl+Shift+Tab
+        prev_tab = QShortcut(QKeySequence("Ctrl+Shift+Tab"), self)
+        prev_tab.activated.connect(self._prev_tab)
+        
+        # Navigation in Preview tab: Left/Right arrows when in preview
+        left_arrow = QShortcut(QKeySequence(Qt.Key_Left), self)
+        left_arrow.activated.connect(self._preview_prev)
+        
+        right_arrow = QShortcut(QKeySequence(Qt.Key_Right), self)
+        right_arrow.activated.connect(self._preview_next)
+    
+    def _next_tab(self) -> None:
+        """Go to next tab."""
+        current = self.tab_widget.currentIndex()
+        next_idx = (current + 1) % self.tab_widget.count()
+        self.tab_widget.setCurrentIndex(next_idx)
+    
+    def _prev_tab(self) -> None:
+        """Go to previous tab."""
+        current = self.tab_widget.currentIndex()
+        prev_idx = (current - 1) % self.tab_widget.count()
+        self.tab_widget.setCurrentIndex(prev_idx)
+    
+    def _preview_prev(self) -> None:
+        """Go to previous recipient in preview (only when Preview tab active)."""
+        if self.tab_widget.currentIndex() == 4:  # Preview tab
+            self.tab_preview._prev_recipient()
+    
+    def _preview_next(self) -> None:
+        """Go to next recipient in preview (only when Preview tab active)."""
+        if self.tab_widget.currentIndex() == 4:  # Preview tab
+            self.tab_preview._next_recipient()
+    
     def _connect_signals(self) -> None:
         """Connect signals between tabs."""
         # Excel tab signals
@@ -178,13 +223,26 @@ class MainWindow(QMainWindow):
             email_column=mapping.get('to', ''),
             cc_column=mapping.get('cc'),
             bcc_column=mapping.get('bcc'),
-            identifier_column=mapping.get('identifier')
+            identifier_column=mapping.get('identifier'),
+            identifier_column2=mapping.get('identifier2')
         )
         
-        # Update attachments tab with identifiers
-        if mapping.get('identifier'):
+        # Update attachments tab with identifiers from both columns
+        id_col1 = mapping.get('identifier')
+        id_col2 = mapping.get('identifier2')
+        
+        if id_col1 or id_col2:
             data = self.tab_excel.get_data()
-            identifiers = [row.get(mapping['identifier'], '') for row in data]
+            identifiers = []
+            for row in data:
+                if id_col1:
+                    id1 = str(row.get(id_col1, '')).strip()
+                    if id1 and id1 not in identifiers:
+                        identifiers.append(id1)
+                if id_col2:
+                    id2 = str(row.get(id_col2, '')).strip()
+                    if id2 and id2 not in identifiers:
+                        identifiers.append(id2)
             self.tab_attachments.set_identifiers(identifiers)
         
         # Update recipients tab
@@ -319,12 +377,40 @@ class MainWindow(QMainWindow):
         if self.session_manager.has_saved_session():
             info = self.session_manager.get_session_info()
             
+            # Build detailed info
+            excel_file = info.get('excel_file', 'Not set')
+            if excel_file and excel_file != 'Not set':
+                import os
+                excel_file = os.path.basename(excel_file)
+            
+            template_name = info.get('template_name', 'None')
+            recipients = info.get('selected_count', 0)
+            saved_at = info.get('saved_at', 'unknown')
+            
+            # Calculate time ago
+            try:
+                from datetime import datetime
+                saved_time = datetime.fromisoformat(saved_at)
+                now = datetime.now()
+                diff = now - saved_time
+                if diff.days > 0:
+                    time_ago = f"{diff.days} day(s) ago"
+                elif diff.seconds > 3600:
+                    time_ago = f"{diff.seconds // 3600} hour(s) ago"
+                else:
+                    time_ago = f"{diff.seconds // 60} minute(s) ago"
+            except:
+                time_ago = saved_at
+            
             reply = show_question(
                 self,
-                "Restore Session?",
-                f"Found saved session from {info.get('saved_at', 'unknown')}.\n\n"
-                f"Excel: {info.get('excel_file', 'Not set')}\n\n"
-                "Do you want to restore it?"
+                "Restore Previous Session?",
+                f"Found a saved session:\n\n"
+                f"📁 File: {excel_file}\n"
+                f"📝 Template: {template_name}\n"
+                f"👥 Recipients: {recipients} selected\n"
+                f"🕐 Last saved: {time_ago}\n\n"
+                "Do you want to restore this session?"
             )
             
             if reply:

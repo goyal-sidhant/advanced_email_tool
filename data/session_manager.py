@@ -114,11 +114,17 @@ class SessionManager:
             with open(self.session_file, 'r', encoding='utf-8') as f:
                 state = json.load(f)
             
+            # Count selected recipients
+            selected_indices = state.get('selected_indices', [])
+            selected_count = len(selected_indices) if selected_indices else 0
+            
             return {
                 'saved_at': state.get('_metadata', {}).get('saved_at', 'Unknown'),
                 'version': state.get('_metadata', {}).get('version', 'Unknown'),
                 'excel_file': state.get('excel_file_path', 'Not set'),
                 'has_template': bool(state.get('subject_template') or state.get('body_template')),
+                'template_name': state.get('template_name', 'Custom'),
+                'selected_count': selected_count,
             }
             
         except Exception:

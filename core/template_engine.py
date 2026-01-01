@@ -22,10 +22,10 @@ class TemplateEngine:
     def __init__(self):
         """Initialize the template engine."""
         self.logger = get_logger()
-        # Match {VariableName} but NOT CSS like { white-space: pre-wrap; }
-        # Valid variable: starts with letter/underscore, can contain letters/numbers/underscore/space
-        # Must NOT contain : or ; (CSS indicators)
-        self.variable_pattern = re.compile(r'\{([A-Za-z_][A-Za-z0-9_ ]*)\}')
+        # Match {VariableName} - allows letters, numbers, spaces, and common special chars
+        # Excludes : ; { } which are CSS/template syntax
+        # Pattern: starts with letter/number, can contain letters/numbers/spaces/special chars
+        self.variable_pattern = re.compile(r'\{([^{}:;]+)\}')
     
     def _is_valid_variable(self, var_name: str) -> bool:
         """
@@ -43,6 +43,10 @@ class TemplateEngine:
         if var_name != var_name.strip():
             return False
         return True
+    
+    def _clean_variable_name(self, var_name: str) -> str:
+        """Clean variable name for matching."""
+        return var_name.strip()
     
     def substitute(
         self, 
@@ -66,14 +70,21 @@ class TemplateEngine:
         
         def replace_var(match):
             var_name = match.group(1)
-            if var_name in data:
-                value = data[var_name]
+            
+            # Skip CSS-like content
+            if not self._is_valid_variable(var_name):
+                return match.group(0)  # Return unchanged
+            
+            clean_name = self._clean_variable_name(var_name)
+            
+            if clean_name in data:
+                value = data[clean_name]
                 # Convert None to empty string
                 if value is None:
                     return ""
                 return str(value)
             else:
-                self.logger.warning(f"Variable '{var_name}' not found in data")
+                self.logger.warning(f"Variable '{clean_name}' not found in data")
                 return missing_placeholder
         
         return self.variable_pattern.sub(replace_var, template)
@@ -127,13 +138,17 @@ class TemplateEngine:
         
         variables = self.variable_pattern.findall(template)
         
-        # Remove duplicates while preserving order
+        # Remove duplicates while preserving order, and filter invalid
         seen = set()
         unique = []
         for var in variables:
-            if var not in seen:
-                seen.add(var)
-                unique.append(var)
+            # Skip CSS-like content
+            if not self._is_valid_variable(var):
+                continue
+            clean_var = self._clean_variable_name(var)
+            if clean_var not in seen:
+                seen.add(clean_var)
+                unique.append(clean_var)
         
         return unique
     
@@ -153,7 +168,7 @@ class TemplateEngine:
             Tuple of (all_valid, used_variables, missing_variables)
         """
         variables = self.extract_variables(template)
-        available_set = set(available_columns)
+        available_set = set(col.strip() for col in available_columns)
         
         missing = [var for var in variables if var not in available_set]
         

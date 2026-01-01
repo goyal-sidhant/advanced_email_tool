@@ -84,6 +84,7 @@ class EmailBuilder:
         self.cc_column: Optional[str] = None
         self.bcc_column: Optional[str] = None
         self.identifier_column: Optional[str] = None
+        self.identifier_column2: Optional[str] = None
         self.universal_bcc: Optional[str] = None
         
         # Attachments
@@ -107,7 +108,8 @@ class EmailBuilder:
         email_column: str,
         cc_column: Optional[str] = None,
         bcc_column: Optional[str] = None,
-        identifier_column: Optional[str] = None
+        identifier_column: Optional[str] = None,
+        identifier_column2: Optional[str] = None
     ) -> None:
         """
         Set column mapping for email fields.
@@ -117,11 +119,13 @@ class EmailBuilder:
             cc_column: Column name for CC (optional)
             bcc_column: Column name for BCC (optional)
             identifier_column: Column name for file matching identifier
+            identifier_column2: Second column for file matching (optional)
         """
         self.email_column = email_column
         self.cc_column = cc_column
         self.bcc_column = bcc_column
         self.identifier_column = identifier_column
+        self.identifier_column2 = identifier_column2
     
     def set_universal_bcc(self, bcc_address: Optional[str]) -> None:
         """
@@ -209,11 +213,24 @@ class EmailBuilder:
         # Add static attachments
         attachments.extend(self.static_attachments)
         
-        # Add variable attachments (matched by identifier)
-        if self.attachment_matcher and self.identifier_column:
-            identifier = str(row_data.get(self.identifier_column, "")).strip()
-            if identifier:
-                matches = self.attachment_matcher.match_identifier(identifier)
+        # Add variable attachments (matched by any identifier)
+        if self.attachment_matcher and (self.identifier_column or self.identifier_column2):
+            # Collect all identifiers for this row
+            identifiers = []
+            
+            if self.identifier_column:
+                id1 = str(row_data.get(self.identifier_column, "")).strip()
+                if id1:
+                    identifiers.append(id1)
+            
+            if self.identifier_column2:
+                id2 = str(row_data.get(self.identifier_column2, "")).strip()
+                if id2:
+                    identifiers.append(id2)
+            
+            if identifiers:
+                # Use multiple identifier matching (OR logic)
+                matches = self.attachment_matcher.match_multiple_identifiers(identifiers)
                 for full_path, filename, size in matches:
                     attachments.append(full_path)
         
@@ -343,10 +360,22 @@ class EmailBuilder:
             })
         
         # Variable
-        if self.attachment_matcher and self.identifier_column:
-            identifier = str(row_data.get(self.identifier_column, "")).strip()
-            if identifier:
-                matches = self.attachment_matcher.match_identifier(identifier)
+        if self.attachment_matcher and (self.identifier_column or self.identifier_column2):
+            # Collect all identifiers for this row
+            identifiers = []
+            
+            if self.identifier_column:
+                id1 = str(row_data.get(self.identifier_column, "")).strip()
+                if id1:
+                    identifiers.append(id1)
+            
+            if self.identifier_column2:
+                id2 = str(row_data.get(self.identifier_column2, "")).strip()
+                if id2:
+                    identifiers.append(id2)
+            
+            if identifiers:
+                matches = self.attachment_matcher.match_multiple_identifiers(identifiers)
                 for full_path, filename, size in matches:
                     from utils import format_bytes
                     attachment_info.append({

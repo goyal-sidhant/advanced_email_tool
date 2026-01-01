@@ -162,6 +162,29 @@ class TabAttachments(QWidget):
         
         variable_layout.addLayout(stats_layout)
         
+        # Unmatched identifiers warning
+        self.unmatched_frame = QWidget()
+        unmatched_layout = QHBoxLayout(self.unmatched_frame)
+        unmatched_layout.setContentsMargins(0, 5, 0, 5)
+        
+        self.unmatched_icon = QLabel("⚠")
+        self.unmatched_icon.setStyleSheet("color: #dc3545; font-size: 16px;")
+        unmatched_layout.addWidget(self.unmatched_icon)
+        
+        self.unmatched_label = QLabel("")
+        self.unmatched_label.setStyleSheet("color: #dc3545;")
+        unmatched_layout.addWidget(self.unmatched_label)
+        
+        self.view_unmatched_btn = QPushButton("View List")
+        self.view_unmatched_btn.setFixedWidth(80)
+        self.view_unmatched_btn.clicked.connect(self._show_unmatched_identifiers)
+        unmatched_layout.addWidget(self.view_unmatched_btn)
+        
+        unmatched_layout.addStretch()
+        
+        self.unmatched_frame.setVisible(False)
+        variable_layout.addWidget(self.unmatched_frame)
+        
         # Test matching section
         test_group = QGroupBox("Test Matching")
         test_layout = QVBoxLayout(test_group)
@@ -261,6 +284,7 @@ class TabAttachments(QWidget):
         """Update match statistics display."""
         if not self._identifiers:
             self.stats_label.setText("")
+            self.unmatched_frame.setVisible(False)
             return
         
         stats = self.attachment_matcher.get_match_statistics(self._identifiers)
@@ -270,15 +294,41 @@ class TabAttachments(QWidget):
         percent = stats['match_percentage']
         unmatched = stats['unmatched_count']
         
+        # Store unmatched list for later
+        self._unmatched_identifiers = stats.get('unmatched_identifiers', [])
+        
         if unmatched > 0:
             self.stats_label.setText(
                 f"<b>{matched}/{total}</b> identifiers matched ({percent:.0f}%) | "
                 f"<span style='color: #dc3545;'>{unmatched} unmatched</span>"
             )
+            # Show warning frame
+            self.unmatched_label.setText(f"{unmatched} identifier(s) have NO matching files")
+            self.unmatched_frame.setVisible(True)
         else:
             self.stats_label.setText(
                 f"<b>{matched}/{total}</b> identifiers matched ({percent:.0f}%) ✓"
             )
+            self.unmatched_frame.setVisible(False)
+    
+    def _show_unmatched_identifiers(self) -> None:
+        """Show list of identifiers with no matching files."""
+        if not hasattr(self, '_unmatched_identifiers') or not self._unmatched_identifiers:
+            show_info(self, "All Matched", "All identifiers have matching files!")
+            return
+        
+        details = "Identifiers with NO matching files:\n\n"
+        for i, identifier in enumerate(self._unmatched_identifiers[:100], 1):  # Limit to 100
+            details += f"{i}. {identifier}\n"
+        
+        if len(self._unmatched_identifiers) > 100:
+            details += f"\n... and {len(self._unmatched_identifiers) - 100} more"
+        
+        QMessageBox.warning(
+            self,
+            "Unmatched Identifiers",
+            details
+        )
     
     def _test_matching(self) -> None:
         """Test matching for entered identifier."""

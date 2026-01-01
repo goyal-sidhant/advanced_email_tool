@@ -158,6 +158,69 @@ class TabSend(QWidget):
         
         layout.addWidget(config_group)
         
+        # Pre-Send Summary section
+        summary_group = QGroupBox("Pre-Send Summary")
+        summary_layout = QVBoxLayout(summary_group)
+        
+        # Summary stats
+        stats_layout = QHBoxLayout()
+        
+        self.summary_recipients = QLabel("Recipients: 0")
+        self.summary_recipients.setStyleSheet("font-weight: bold;")
+        stats_layout.addWidget(self.summary_recipients)
+        
+        stats_layout.addSpacing(30)
+        
+        self.summary_attachments = QLabel("With attachments: 0")
+        stats_layout.addWidget(self.summary_attachments)
+        
+        stats_layout.addSpacing(30)
+        
+        self.summary_no_attachments = QLabel("")
+        self.summary_no_attachments.setStyleSheet("color: #856404;")
+        stats_layout.addWidget(self.summary_no_attachments)
+        
+        stats_layout.addStretch()
+        
+        summary_layout.addLayout(stats_layout)
+        
+        # Warning section
+        self.warning_frame = QWidget()
+        warning_layout = QHBoxLayout(self.warning_frame)
+        warning_layout.setContentsMargins(0, 5, 0, 5)
+        
+        self.warning_icon = QLabel("⚠")
+        self.warning_icon.setStyleSheet("color: #dc3545; font-size: 16px;")
+        warning_layout.addWidget(self.warning_icon)
+        
+        self.warning_label = QLabel("")
+        self.warning_label.setStyleSheet("color: #dc3545;")
+        warning_layout.addWidget(self.warning_label)
+        
+        self.view_warnings_btn = QPushButton("View List")
+        self.view_warnings_btn.setFixedWidth(80)
+        self.view_warnings_btn.clicked.connect(self._show_warning_details)
+        warning_layout.addWidget(self.view_warnings_btn)
+        
+        warning_layout.addStretch()
+        
+        self.warning_frame.setVisible(False)
+        summary_layout.addWidget(self.warning_frame)
+        
+        # Test send button
+        test_layout = QHBoxLayout()
+        
+        self.test_btn = QPushButton("📧 Send Test Email First")
+        self.test_btn.setToolTip("Send first email to yourself for verification")
+        self.test_btn.clicked.connect(self._send_test_email)
+        test_layout.addWidget(self.test_btn)
+        
+        test_layout.addStretch()
+        
+        summary_layout.addLayout(test_layout)
+        
+        layout.addWidget(summary_group)
+        
         # Status section
         status_layout = QHBoxLayout()
         
@@ -256,6 +319,9 @@ class TabSend(QWidget):
         self._emails = emails
         self.status_label.setText(f"Ready: {len(emails)} emails to send")
         
+        # Update pre-send summary
+        self._update_summary()
+        
         # Check for incomplete session
         if self.checkpoint_manager.has_incomplete_session():
             info = self.checkpoint_manager.get_incomplete_session_info()
@@ -264,6 +330,98 @@ class TabSend(QWidget):
                 self.progress_log.log_warning(
                     f"Found incomplete session: {info['completed_count']}/{info['total_recipients']} sent"
                 )
+    
+    def _update_summary(self) -> None:
+        """Update the pre-send summary display."""
+        if not self._emails:
+            self.summary_recipients.setText("Recipients: 0")
+            self.summary_attachments.setText("With attachments: 0")
+            self.summary_no_attachments.setText("")
+            self.warning_frame.setVisible(False)
+            return
+        
+        total = len(self._emails)
+        with_attachments = sum(1 for e in self._emails if e.attachments)
+        without_attachments = total - with_attachments
+        
+        self.summary_recipients.setText(f"Recipients: {total}")
+        self.summary_attachments.setText(f"With attachments: {with_attachments}")
+        
+        # Show warning for emails without attachments
+        self._no_attachment_emails = [e for e in self._emails if not e.attachments]
+        
+        if without_attachments > 0:
+            self.summary_no_attachments.setText(f"⚠ {without_attachments} without attachments")
+            self.warning_label.setText(f"{without_attachments} recipient(s) have no attachments")
+            self.warning_frame.setVisible(True)
+        else:
+            self.summary_no_attachments.setText("✓ All have attachments")
+            self.summary_no_attachments.setStyleSheet("color: #28a745;")
+            self.warning_frame.setVisible(False)
+    
+    def _show_warning_details(self) -> None:
+        """Show details about warnings (emails without attachments)."""
+        if not hasattr(self, '_no_attachment_emails') or not self._no_attachment_emails:
+            return
+        
+        details = "Recipients without attachments:\n\n"
+        for i, email in enumerate(self._no_attachment_emails[:50], 1):  # Limit to 50
+            to_str = email.to[0] if email.to else "Unknown"
+            details += f"{i}. {to_str}\n"
+        
+        if len(self._no_attachment_emails) > 50:
+            details += f"\n... and {len(self._no_attachment_emails) - 50} more"
+        
+        QMessageBox.information(
+            self,
+            "Recipients Without Attachments",
+            details
+        )
+    
+    def _send_test_email(self) -> None:
+        """Send a test email (first email to logged-in user)."""
+        if not self._emails:
+            show_error(self, "Error", "No emails to test.")
+            return
+        
+        # Get the logged-in user's email
+        account = self.outlook_sender.get_selected_account()
+        if not account:
+            show_error(self, "Error", "No Outlook account selected.")
+            return
+        
+        my_email = account.email
+        
+        # Confirm
+        reply = QMessageBox.question(
+            self,
+            "Send Test Email",
+            f"This will send the FIRST email to yourself:\n\n"
+            f"To: {my_email}\n"
+            f"Subject: [TEST] {self._emails[0].subject[:50]}...\n\n"
+            f"Continue?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        
+        if reply != QMessageBox.Yes:
+            return
+        
+        # Create test email (copy of first email, sent to self)
+        from copy import deepcopy
+        test_email = deepcopy(self._emails[0])
+        test_email.to = [my_email]
+        test_email.cc = []
+        test_email.bcc = []
+        test_email.subject = f"[TEST] {test_email.subject}"
+        
+        # Send
+        success, message = self.outlook_sender.send_email(test_email)
+        
+        if success:
+            show_info(self, "Test Sent", f"Test email sent to {my_email}\n\nCheck your inbox!")
+            self.progress_log.log_success(f"Test email sent to {my_email}")
+        else:
+            show_error(self, "Test Failed", f"Could not send test email:\n{message}")
     
     def _start_sending(self) -> None:
         """Start the send operation."""
