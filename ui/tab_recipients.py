@@ -1,0 +1,265 @@
+"""
+Advanced Email Tool - Recipients Tab
+====================================
+Tab for selecting which recipients to send emails to.
+"""
+
+from typing import Optional, List, Dict, Any
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QGroupBox,
+    QPushButton, QLabel, QComboBox, QMessageBox
+)
+from PyQt5.QtCore import Qt, pyqtSignal
+
+from ui.components.recipient_list import RecipientListWidget
+from ui.components.dialogs import show_error, show_info, show_warning, InputDialog
+from data.recipient_lists import RecipientListStorage
+from utils import get_logger
+
+
+class TabRecipients(QWidget):
+    """
+    Recipient selection tab.
+    
+    Features:
+    - View all recipients from Excel
+    - Select/deselect recipients
+    - Save/load recipient lists
+    - Search and filter
+    """
+    
+    # Signals
+    selection_changed = pyqtSignal(int)  # Emits selected count
+    
+    def __init__(self, parent=None):
+        """Initialize the Recipients tab."""
+        super().__init__(parent)
+        
+        self.logger = get_logger()
+        self.list_storage = RecipientListStorage()
+        self._email_column: Optional[str] = None
+        self._identifier_column: Optional[str] = None
+        
+        self._setup_ui()
+    
+    def _setup_ui(self) -> None:
+        """Set up the user interface."""
+        layout = QVBoxLayout(self)
+        
+        # Saved lists management
+        lists_layout = QHBoxLayout()
+        
+        lists_label = QLabel("Saved Lists:")
+        lists_layout.addWidget(lists_label)
+        
+        self.lists_combo = QComboBox()
+        self.lists_combo.setMinimumWidth(200)
+        self.lists_combo.addItem("-- Select Saved List --")
+        self._refresh_lists()
+        lists_layout.addWidget(self.lists_combo)
+        
+        self.load_list_btn = QPushButton("Load")
+        self.load_list_btn.clicked.connect(self._load_list)
+        lists_layout.addWidget(self.load_list_btn)
+        
+        self.save_list_btn = QPushButton("Save Selection...")
+        self.save_list_btn.clicked.connect(self._save_list)
+        lists_layout.addWidget(self.save_list_btn)
+        
+        self.delete_list_btn = QPushButton("Delete")
+        self.delete_list_btn.clicked.connect(self._delete_list)
+        lists_layout.addWidget(self.delete_list_btn)
+        
+        lists_layout.addStretch()
+        
+        layout.addLayout(lists_layout)
+        
+        # Recipient list widget
+        self.recipient_list = RecipientListWidget()
+        self.recipient_list.selection_changed.connect(self._on_selection_changed)
+        layout.addWidget(self.recipient_list, stretch=1)
+        
+        # Summary bar
+        summary_layout = QHBoxLayout()
+        
+        self.summary_label = QLabel("No data loaded")
+        self.summary_label.setStyleSheet("font-weight: bold;")
+        summary_layout.addWidget(self.summary_label)
+        
+        summary_layout.addStretch()
+        
+        # Quick selection buttons
+        self.select_all_btn = QPushButton("Select All")
+        self.select_all_btn.clicked.connect(self.recipient_list.select_all)
+        summary_layout.addWidget(self.select_all_btn)
+        
+        self.select_none_btn = QPushButton("Clear Selection")
+        self.select_none_btn.clicked.connect(self.recipient_list.select_none)
+        summary_layout.addWidget(self.select_none_btn)
+        
+        layout.addLayout(summary_layout)
+    
+    def _refresh_lists(self) -> None:
+        """Refresh saved lists dropdown."""
+        current = self.lists_combo.currentText()
+        
+        self.lists_combo.blockSignals(True)
+        self.lists_combo.clear()
+        self.lists_combo.addItem("-- Select Saved List --")
+        
+        lists = self.list_storage.list_all()
+        for lst in lists:
+            self.lists_combo.addItem(f"{lst['name']} ({lst['count']})")
+        
+        # Restore selection
+        idx = self.lists_combo.findText(current)
+        if idx >= 0:
+            self.lists_combo.setCurrentIndex(idx)
+        
+        self.lists_combo.blockSignals(False)
+    
+    def _load_list(self) -> None:
+        """Load selected saved list."""
+        text = self.lists_combo.currentText()
+        if text == "-- Select Saved List --":
+            return
+        
+        # Extract name (remove count part)
+        name = text.rsplit(" (", 1)[0]
+        
+        indices = self.list_storage.get_selected_indices(name)
+        if indices is not None:
+            # Validate indices against current data
+            max_idx = self.recipient_list.get_total_count() - 1
+            valid_indices = [i for i in indices if i <= max_idx]
+            
+            if len(valid_indices) < len(indices):
+                show_warning(
+                    self,
+                    "Partial Load",
+                    f"Some saved selections are out of range.\n"
+                    f"Loaded {len(valid_indices)} of {len(indices)} recipients."
+                )
+            
+            self.recipient_list.set_selected_indices(valid_indices)
+            self.logger.info(f"Loaded list '{name}' with {len(valid_indices)} recipients")
+        else:
+            show_error(self, "Error", f"Could not load list '{name}'.")
+    
+    def _save_list(self) -> None:
+        """Save current selection as a list."""
+        selected = self.recipient_list.get_selected_indices()
+        if not selected:
+            show_error(self, "Error", "No recipients selected to save.")
+            return
+        
+        name, ok = InputDialog.get_text(
+            self,
+            "Save Recipient List",
+            "Enter list name:",
+            ""
+        )
+        
+        if ok and name:
+            if self.list_storage.list_exists(name):
+                reply = QMessageBox.question(
+                    self,
+                    "Overwrite?",
+                    f"List '{name}' already exists. Overwrite?",
+                    QMessageBox.Yes | QMessageBox.No
+                )
+                if reply != QMessageBox.Yes:
+                    return
+            
+            success, msg = self.list_storage.save_list(name, selected)
+            
+            if success:
+                self._refresh_lists()
+                show_info(self, "Saved", f"List '{name}' saved with {len(selected)} recipients.")
+            else:
+                show_error(self, "Error", msg)
+    
+    def _delete_list(self) -> None:
+        """Delete selected saved list."""
+        text = self.lists_combo.currentText()
+        if text == "-- Select Saved List --":
+            return
+        
+        name = text.rsplit(" (", 1)[0]
+        
+        reply = QMessageBox.question(
+            self,
+            "Delete List?",
+            f"Are you sure you want to delete '{name}'?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            success, msg = self.list_storage.delete_list(name)
+            if success:
+                self._refresh_lists()
+                self.lists_combo.setCurrentIndex(0)
+                show_info(self, "Deleted", f"List '{name}' deleted.")
+            else:
+                show_error(self, "Error", msg)
+    
+    def _on_selection_changed(self, count: int) -> None:
+        """Handle selection changes."""
+        total = self.recipient_list.get_total_count()
+        self.summary_label.setText(f"{count} of {total} recipients selected")
+        self.selection_changed.emit(count)
+    
+    def set_data(
+        self,
+        data: List[Dict[str, Any]],
+        columns: List[str],
+        email_column: Optional[str] = None,
+        identifier_column: Optional[str] = None
+    ) -> None:
+        """
+        Set recipient data.
+        
+        Args:
+            data: List of row dictionaries
+            columns: List of column names
+            email_column: Name of email column
+            identifier_column: Name of identifier column
+        """
+        self._email_column = email_column
+        self._identifier_column = identifier_column
+        
+        self.recipient_list.set_data(
+            data, columns, email_column, identifier_column
+        )
+        
+        # Auto-select all by default
+        self.recipient_list.select_all()
+        
+        self._update_summary()
+    
+    def _update_summary(self) -> None:
+        """Update summary label."""
+        selected = self.recipient_list.get_selected_count()
+        total = self.recipient_list.get_total_count()
+        self.summary_label.setText(f"{selected} of {total} recipients selected")
+    
+    def get_selected_indices(self) -> List[int]:
+        """Get list of selected row indices."""
+        return self.recipient_list.get_selected_indices()
+    
+    def get_selected_data(self) -> List[Dict[str, Any]]:
+        """Get data for selected rows."""
+        return self.recipient_list.get_selected_data()
+    
+    def get_selected_count(self) -> int:
+        """Get count of selected recipients."""
+        return self.recipient_list.get_selected_count()
+    
+    def set_selected_indices(self, indices: List[int]) -> None:
+        """Set selected indices (for session restore)."""
+        self.recipient_list.set_selected_indices(indices)
+    
+    def clear(self) -> None:
+        """Clear all data."""
+        self.recipient_list.clear()
+        self.summary_label.setText("No data loaded")
