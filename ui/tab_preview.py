@@ -309,6 +309,11 @@ class TabPreview(QWidget):
         
         return f"{idx + 1}. {email}"
     
+    def _refresh_current(self) -> None:
+        """Refresh the current preview."""
+        if self._current_index >= 0 and self._current_index < self.recipient_combo.count():
+            self._show_preview(self._current_index)
+    
     def _show_preview(self, combo_index: int) -> None:
         """
         Show preview for recipient at combo index.
