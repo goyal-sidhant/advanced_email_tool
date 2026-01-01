@@ -68,6 +68,7 @@ sessions/
 checkpoints/
 *.session
 *.checkpoint
+*.app_data
 
 # Logs
 logs/
