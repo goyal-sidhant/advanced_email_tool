@@ -26,6 +26,7 @@ class Email:
         body_html: HTML formatted body
         body_text: Plain text body (fallback)
         attachments: List of file paths to attach
+        embedded_images: List of dicts with 'data', 'mime_type', 'cid' for inline images
         row_data: Original data row (for reference)
         row_index: Index in original data (for tracking)
     """
@@ -36,6 +37,7 @@ class Email:
     body_html: str = ""
     body_text: str = ""
     attachments: List[str] = field(default_factory=list)
+    embedded_images: List[Dict[str, Any]] = field(default_factory=list)
     row_data: Dict[str, Any] = field(default_factory=dict)
     row_index: int = -1
     
@@ -91,6 +93,9 @@ class EmailBuilder:
         # Attachments
         self.static_attachments: List[str] = []
         self.attachment_matcher = None  # Will be set externally
+        
+        # Embedded images (inline in body, same for all recipients)
+        self.embedded_images: List[Dict[str, Any]] = []
     
     def set_templates(self, subject: str, body: str) -> None:
         """
@@ -103,6 +108,16 @@ class EmailBuilder:
         self.subject_template = subject
         self.body_template = body
         self.logger.debug("Templates set")
+    
+    def set_embedded_images(self, images: List[Dict[str, Any]]) -> None:
+        """
+        Set embedded images for inline display.
+        
+        Args:
+            images: List of dicts with 'data', 'mime_type', 'cid', 'original_tag'
+        """
+        self.embedded_images = images.copy() if images else []
+        self.logger.debug(f"Set {len(self.embedded_images)} embedded images")
     
     def set_column_mapping(
         self,
@@ -243,6 +258,9 @@ class EmailBuilder:
                     attachments.append(full_path)
         
         email.attachments = attachments
+        
+        # Add embedded images (same for all emails)
+        email.embedded_images = self.embedded_images.copy() if self.embedded_images else []
         
         return email
     

@@ -10,12 +10,14 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTextEdit,
     QToolBar, QAction, QFontComboBox, QComboBox,
     QColorDialog, QMenu, QPushButton, QLabel,
-    QSplitter, QPlainTextEdit
+    QSplitter, QPlainTextEdit, QApplication, QFileDialog,
+    QMessageBox
 )
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal, QMimeData, QUrl, QByteArray
 from PyQt5.QtGui import (
     QFont, QTextCharFormat, QColor, QTextCursor,
-    QTextListFormat, QIcon, QKeySequence
+    QTextListFormat, QIcon, QKeySequence, QImage,
+    QImageReader, QTextDocumentFragment
 )
 
 
@@ -64,7 +66,11 @@ class RichTextEditor(QWidget):
         self.editor = QTextEdit()
         self.editor.setFont(QFont("Segoe UI", 11))
         self.editor.setAcceptRichText(True)
+        self.editor.setAcceptDrops(True)
         self.splitter.addWidget(self.editor)
+        
+        # Install event filter for drag-drop
+        self.editor.installEventFilter(self)
         
         # HTML source view (hidden by default)
         self.source_view = QPlainTextEdit()
@@ -195,11 +201,72 @@ class RichTextEditor(QWidget):
         self.align_right_action.setToolTip("Align Right")
         self.align_right_action.triggered.connect(lambda: self._set_alignment(Qt.AlignRight))
         self.toolbar.addAction(self.align_right_action)
+        
+        self.toolbar.addSeparator()
+        
+        # Paste Table from Excel
+        self.paste_table_action = QAction("📋 Table", self)
+        self.paste_table_action.setToolTip("Paste Table from Excel (Ctrl+Shift+V)")
+        self.paste_table_action.setShortcut("Ctrl+Shift+V")
+        self.paste_table_action.triggered.connect(self._paste_table_from_clipboard)
+        self.toolbar.addAction(self.paste_table_action)
+        
+        # Insert Image
+        self.insert_image_btn = QPushButton("🖼️ Image")
+        self.insert_image_btn.setToolTip("Insert Image")
+        self.insert_image_btn.setFlat(True)
+        
+        image_menu = QMenu(self)
+        image_menu.addAction("From File...", self._insert_image_from_file)
+        image_menu.addAction("From Clipboard", self._insert_image_from_clipboard)
+        self.insert_image_btn.setMenu(image_menu)
+        self.toolbar.addWidget(self.insert_image_btn)
     
     def _setup_connections(self) -> None:
         """Set up signal connections."""
         self.editor.textChanged.connect(self._on_text_changed)
         self.editor.cursorPositionChanged.connect(self._update_format_actions)
+    
+    def eventFilter(self, obj, event):
+        """Handle drag-drop events for images."""
+        from PyQt5.QtCore import QEvent
+        
+        if obj == self.editor:
+            if event.type() == QEvent.DragEnter:
+                mime_data = event.mimeData()
+                if mime_data.hasUrls() or mime_data.hasImage():
+                    # Check if any URL is an image
+                    if mime_data.hasUrls():
+                        for url in mime_data.urls():
+                            path = url.toLocalFile().lower()
+                            if path.endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')):
+                                event.acceptProposedAction()
+                                return True
+                    if mime_data.hasImage():
+                        event.acceptProposedAction()
+                        return True
+            
+            elif event.type() == QEvent.Drop:
+                mime_data = event.mimeData()
+                
+                # Handle dropped image file
+                if mime_data.hasUrls():
+                    for url in mime_data.urls():
+                        path = url.toLocalFile()
+                        if path.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')):
+                            self._insert_image(path)
+                            event.acceptProposedAction()
+                            return True
+                
+                # Handle dropped image data
+                if mime_data.hasImage():
+                    image = QImage(mime_data.imageData())
+                    if not image.isNull():
+                        self._insert_qimage(image)
+                        event.acceptProposedAction()
+                        return True
+        
+        return super().eventFilter(obj, event)
     
     def _on_text_changed(self) -> None:
         """Handle text changes."""
@@ -420,3 +487,291 @@ class RichTextEditor(QWidget):
             html: HTML to insert
         """
         self.editor.insertHtml(html)
+    
+    # ========== TABLE METHODS ==========
+    
+    def _paste_table_from_clipboard(self) -> None:
+        """Paste table from clipboard (Excel, Google Sheets, etc.)."""
+        clipboard = QApplication.clipboard()
+        mime_data = clipboard.mimeData()
+        
+        html_table = None
+        
+        # Try HTML format first (Excel copies as HTML)
+        if mime_data.hasHtml():
+            html = mime_data.html()
+            # Check if it contains a table
+            if '<table' in html.lower():
+                html_table = self._extract_and_style_table(html)
+        
+        # Fallback to plain text (tab-separated)
+        if not html_table and mime_data.hasText():
+            text = mime_data.text()
+            if '\t' in text:  # Tab-separated = likely from spreadsheet
+                html_table = self._convert_tsv_to_table(text)
+        
+        if html_table:
+            self.editor.insertHtml(html_table)
+            self.editor.insertHtml("<p></p>")  # Add paragraph after table
+            self.content_changed.emit()
+        else:
+            QMessageBox.information(
+                self,
+                "No Table Found",
+                "No table data found in clipboard.\n\n"
+                "Copy cells from Excel or Google Sheets first,\n"
+                "then click 'Paste Table'."
+            )
+    
+    def _extract_and_style_table(self, html: str) -> str:
+        """
+        Extract table from HTML and apply consistent styling.
+        
+        Args:
+            html: Raw HTML from clipboard
+            
+        Returns:
+            Styled HTML table
+        """
+        import re
+        
+        # Find table content
+        table_match = re.search(r'<table[^>]*>(.*?)</table>', html, re.DOTALL | re.IGNORECASE)
+        if not table_match:
+            return ""
+        
+        table_content = table_match.group(1)
+        
+        # Clean up the content - remove excessive styling
+        # Keep only tr and td/th tags
+        table_content = re.sub(r'<colgroup[^>]*>.*?</colgroup>', '', table_content, flags=re.DOTALL | re.IGNORECASE)
+        table_content = re.sub(r'style="[^"]*"', '', table_content, flags=re.IGNORECASE)
+        table_content = re.sub(r'class="[^"]*"', '', table_content, flags=re.IGNORECASE)
+        table_content = re.sub(r'width="[^"]*"', '', table_content, flags=re.IGNORECASE)
+        table_content = re.sub(r'height="[^"]*"', '', table_content, flags=re.IGNORECASE)
+        
+        # Build styled table
+        styled_table = '''
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; border: 1px solid #333;">
+{content}
+</table>
+'''.format(content=table_content)
+        
+        # Style first row as header (bold, background)
+        styled_table = re.sub(
+            r'(<tr[^>]*>)(.*?)(</tr>)',
+            lambda m: m.group(1) + self._style_first_row(m.group(2)) + m.group(3),
+            styled_table,
+            count=1,
+            flags=re.DOTALL | re.IGNORECASE
+        )
+        
+        return styled_table
+    
+    def _style_first_row(self, row_content: str) -> str:
+        """Style first row cells as headers."""
+        import re
+        # Add background and bold to first row cells
+        row_content = re.sub(
+            r'<td([^>]*)>',
+            r'<td\1 style="background-color: #4472C4; color: white; font-weight: bold;">',
+            row_content,
+            flags=re.IGNORECASE
+        )
+        row_content = re.sub(
+            r'<th([^>]*)>',
+            r'<th\1 style="background-color: #4472C4; color: white; font-weight: bold;">',
+            row_content,
+            flags=re.IGNORECASE
+        )
+        return row_content
+    
+    def _convert_tsv_to_table(self, text: str) -> str:
+        """
+        Convert tab-separated text to HTML table.
+        
+        Args:
+            text: Tab-separated text from clipboard
+            
+        Returns:
+            HTML table string
+        """
+        lines = text.strip().split('\n')
+        if not lines:
+            return ""
+        
+        rows_html = []
+        for i, line in enumerate(lines):
+            cells = line.split('\t')
+            if i == 0:
+                # Header row
+                cells_html = ''.join(
+                    f'<td style="background-color: #4472C4; color: white; font-weight: bold; padding: 6px; border: 1px solid #333;">{cell}</td>'
+                    for cell in cells
+                )
+            else:
+                # Data rows
+                cells_html = ''.join(
+                    f'<td style="padding: 6px; border: 1px solid #333;">{cell}</td>'
+                    for cell in cells
+                )
+            rows_html.append(f'<tr>{cells_html}</tr>')
+        
+        table_html = f'''
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; border: 1px solid #333;">
+{''.join(rows_html)}
+</table>
+'''
+        return table_html
+    
+    # ========== IMAGE METHODS ==========
+    
+    def _insert_image_from_file(self) -> None:
+        """Insert image from file picker."""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select Image",
+            "",
+            "Images (*.png *.jpg *.jpeg *.gif *.bmp);;All Files (*.*)"
+        )
+        
+        if file_path:
+            self._insert_image(file_path)
+    
+    def _insert_image_from_clipboard(self) -> None:
+        """Insert image from clipboard."""
+        clipboard = QApplication.clipboard()
+        mime_data = clipboard.mimeData()
+        
+        if mime_data.hasImage():
+            image = clipboard.image()
+            if not image.isNull():
+                self._insert_qimage(image)
+            else:
+                QMessageBox.information(
+                    self,
+                    "No Image",
+                    "No image found in clipboard.\n\n"
+                    "Copy an image or take a screenshot first."
+                )
+        else:
+            QMessageBox.information(
+                self,
+                "No Image",
+                "No image found in clipboard.\n\n"
+                "Copy an image or take a screenshot first."
+            )
+    
+    def _insert_image(self, file_path: str) -> None:
+        """
+        Insert image from file path.
+        
+        Args:
+            file_path: Path to image file
+        """
+        import os
+        import base64
+        
+        # Read and encode image
+        try:
+            with open(file_path, 'rb') as f:
+                image_data = f.read()
+            
+            # Determine mime type
+            ext = os.path.splitext(file_path)[1].lower()
+            mime_types = {
+                '.png': 'image/png',
+                '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg',
+                '.gif': 'image/gif',
+                '.bmp': 'image/bmp',
+            }
+            mime_type = mime_types.get(ext, 'image/png')
+            
+            # Encode to base64
+            b64_data = base64.b64encode(image_data).decode('utf-8')
+            
+            # Insert as base64 data URI (for editor preview)
+            # Note: On send, this will be converted to CID attachment
+            img_html = f'<img src="data:{mime_type};base64,{b64_data}" style="max-width: 100%;" />'
+            self.editor.insertHtml(img_html)
+            self.content_changed.emit()
+            
+        except Exception as e:
+            QMessageBox.warning(
+                self,
+                "Image Error",
+                f"Could not insert image:\n{str(e)}"
+            )
+    
+    def _insert_qimage(self, image: QImage) -> None:
+        """
+        Insert QImage (from clipboard).
+        
+        Args:
+            image: QImage object
+        """
+        import base64
+        from PyQt5.QtCore import QBuffer, QIODevice
+        
+        # Convert to PNG bytes
+        buffer = QBuffer()
+        buffer.open(QIODevice.WriteOnly)
+        image.save(buffer, "PNG")
+        image_data = buffer.data()
+        
+        # Encode to base64
+        b64_data = base64.b64encode(bytes(image_data)).decode('utf-8')
+        
+        # Insert as base64 data URI
+        img_html = f'<img src="data:image/png;base64,{b64_data}" style="max-width: 100%;" />'
+        self.editor.insertHtml(img_html)
+        self.content_changed.emit()
+    
+    def get_embedded_images(self) -> List[dict]:
+        """
+        Extract embedded base64 images from HTML for conversion to CID.
+        
+        Returns:
+            List of dicts with 'data', 'mime_type', 'cid'
+        """
+        import re
+        import uuid
+        
+        html = self.get_html()
+        images = []
+        
+        # Find all base64 images
+        pattern = r'<img[^>]+src="data:([^;]+);base64,([^"]+)"[^>]*>'
+        
+        for match in re.finditer(pattern, html):
+            mime_type = match.group(1)
+            b64_data = match.group(2)
+            cid = f"image_{uuid.uuid4().hex[:8]}"
+            
+            images.append({
+                'mime_type': mime_type,
+                'data': b64_data,
+                'cid': cid,
+                'original_tag': match.group(0),
+            })
+        
+        return images
+    
+    def convert_images_to_cid(self, images: List[dict]) -> str:
+        """
+        Convert base64 images to CID references in HTML.
+        
+        Args:
+            images: List from get_embedded_images()
+            
+        Returns:
+            HTML with CID references instead of base64
+        """
+        html = self.get_html()
+        
+        for img in images:
+            cid_tag = f'<img src="cid:{img["cid"]}" />'
+            html = html.replace(img['original_tag'], cid_tag)
+        
+        return html

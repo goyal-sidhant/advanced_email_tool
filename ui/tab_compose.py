@@ -322,6 +322,10 @@ class TabCompose(QWidget):
         """Get the body HTML template."""
         return self.body_editor.get_html()
     
+    def get_embedded_images(self) -> list:
+        """Get embedded images from the body editor."""
+        return self.body_editor.get_embedded_images()
+    
     def get_universal_bcc(self) -> Optional[str]:
         """Get the universal BCC address."""
         bcc = self.universal_bcc_input.text().strip()

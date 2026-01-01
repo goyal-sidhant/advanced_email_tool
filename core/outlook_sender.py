@@ -230,11 +230,18 @@ class OutlookSender:
             if email.bcc:
                 mail.BCC = "; ".join(email.bcc)
             
-            # Set subject and body
+            # Set subject
             mail.Subject = email.subject
-            mail.HTMLBody = email.body_html
             
-            # Add attachments
+            # Handle embedded images (convert base64 to CID attachments)
+            body_html = email.body_html
+            if email.embedded_images:
+                body_html = self._process_embedded_images(mail, email.embedded_images, body_html)
+            
+            # Set body
+            mail.HTMLBody = body_html
+            
+            # Add regular attachments
             for attachment_path in email.attachments:
                 try:
                     mail.Attachments.Add(attachment_path)
@@ -252,6 +259,72 @@ class OutlookSender:
         except Exception as e:
             self.logger.error(f"Error sending email: {e}", exc_info=True)
             return False, f"Error: {e}"
+    
+    def _process_embedded_images(
+        self, 
+        mail, 
+        images: List[Dict[str, Any]], 
+        body_html: str
+    ) -> str:
+        """
+        Process embedded images - save to temp files and add as CID attachments.
+        
+        Args:
+            mail: Outlook mail item
+            images: List of image dicts with 'data', 'mime_type', 'cid', 'original_tag'
+            body_html: HTML body with base64 images
+            
+        Returns:
+            HTML body with CID references
+        """
+        import tempfile
+        import base64
+        import os
+        
+        # PR_ATTACH_CONTENT_ID property tag
+        PR_ATTACH_CONTENT_ID = "http://schemas.microsoft.com/mapi/proptag/0x3712001F"
+        
+        for img in images:
+            try:
+                # Determine file extension
+                mime_type = img.get('mime_type', 'image/png')
+                ext_map = {
+                    'image/png': '.png',
+                    'image/jpeg': '.jpg',
+                    'image/gif': '.gif',
+                    'image/bmp': '.bmp',
+                }
+                ext = ext_map.get(mime_type, '.png')
+                
+                # Save base64 data to temp file
+                with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as f:
+                    temp_path = f.name
+                    image_data = base64.b64decode(img['data'])
+                    f.write(image_data)
+                
+                # Add as attachment
+                attachment = mail.Attachments.Add(temp_path)
+                
+                # Set Content-ID for inline display
+                cid = img['cid']
+                attachment.PropertyAccessor.SetProperty(PR_ATTACH_CONTENT_ID, cid)
+                
+                # Replace original tag with CID reference in HTML
+                original_tag = img.get('original_tag', '')
+                if original_tag:
+                    cid_tag = f'<img src="cid:{cid}" />'
+                    body_html = body_html.replace(original_tag, cid_tag)
+                
+                # Clean up temp file (Outlook has already read it)
+                try:
+                    os.unlink(temp_path)
+                except:
+                    pass
+                    
+            except Exception as e:
+                self.logger.warning(f"Could not embed image: {e}")
+        
+        return body_html
     
     def send_emails_batch(
         self,

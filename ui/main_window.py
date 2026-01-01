@@ -264,6 +264,10 @@ class MainWindow(QMainWindow):
         self.email_builder.set_universal_bcc(
             self.tab_compose.get_universal_bcc()
         )
+        # Set embedded images (for inline display)
+        self.email_builder.set_embedded_images(
+            self.tab_compose.get_embedded_images()
+        )
     
     def _on_attachments_changed(self) -> None:
         """Handle attachment configuration changes."""

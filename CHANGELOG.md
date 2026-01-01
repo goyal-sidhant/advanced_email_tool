@@ -2,6 +2,32 @@
 
 All notable changes to Advanced Email Tool are documented here.
 
+## [1.2.0] - 2026-01-01
+
+### Added
+
+#### Table in Email Body
+- **Paste Table** button in Compose toolbar (`Ctrl+Shift+V`)
+- Paste directly from Excel, Google Sheets, or any spreadsheet
+- Auto-styles first row as header (blue background, white text)
+- Clean table formatting with borders and padding
+
+#### Image in Email Body  
+- **Insert Image** menu in Compose toolbar
+- Three insertion methods:
+  - From File (file picker)
+  - From Clipboard (screenshots, copied images)
+  - Drag & Drop (like Gmail!)
+- Images embedded using CID attachments (Outlook-native, most reliable)
+- Supported formats: PNG, JPG, GIF, BMP
+
+### Technical
+- Added `embedded_images` field to Email dataclass
+- Images stored as base64 in editor, converted to CID on send
+- Outlook PropertyAccessor used to set Content-ID for inline display
+
+---
+
 ## [1.1.1] - 2026-01-01
 
 ### Added
