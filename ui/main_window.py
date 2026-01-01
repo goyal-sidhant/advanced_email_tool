@@ -224,7 +224,8 @@ class MainWindow(QMainWindow):
             cc_column=mapping.get('cc'),
             bcc_column=mapping.get('bcc'),
             identifier_column=mapping.get('identifier'),
-            identifier_column2=mapping.get('identifier2')
+            identifier_column2=mapping.get('identifier2'),
+            identifier_logic=mapping.get('identifier_logic', 'OR')
         )
         
         # Update attachments tab with identifiers from both columns

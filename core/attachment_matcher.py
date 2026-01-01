@@ -190,6 +190,40 @@ class AttachmentMatcher:
         
         return all_matches
     
+    def match_identifiers_and(
+        self, 
+        identifiers: List[str]
+    ) -> List[Tuple[str, str, int]]:
+        """
+        Find files matching ALL of the given identifiers (AND logic).
+        
+        A file must contain ALL identifiers in its filename to match.
+        
+        Args:
+            identifiers: List of identifiers - ALL must be present
+            
+        Returns:
+            List of matched files (full_path, filename, size_bytes)
+        """
+        if not identifiers:
+            return []
+        
+        # Filter out empty identifiers
+        valid_identifiers = [str(id).strip() for id in identifiers if id and str(id).strip()]
+        
+        if not valid_identifiers:
+            return []
+        
+        # Find files containing ALL identifiers
+        matched = []
+        for full_path, filename, size in self.file_index:
+            # Check if ALL identifiers are present in filename
+            all_present = all(identifier in filename for identifier in valid_identifiers)
+            if all_present:
+                matched.append((full_path, filename, size))
+        
+        return matched
+    
     def get_match_statistics(
         self, 
         identifiers: List[str]

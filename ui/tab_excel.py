@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox,
     QPushButton, QLabel, QComboBox, QTableWidget,
     QTableWidgetItem, QHeaderView, QFileDialog,
-    QMessageBox, QSplitter, QFrame, QSpinBox
+    QMessageBox, QSplitter, QFrame, QSpinBox, QRadioButton
 )
 from PyQt5.QtCore import Qt, pyqtSignal
 
@@ -205,9 +205,28 @@ class TabExcel(QWidget):
         id2_layout.addWidget(self.identifier2_combo)
         mapping_layout.addLayout(id2_layout)
         
+        # AND/OR logic selection
+        logic_layout = QHBoxLayout()
+        logic_label = QLabel("Match logic:")
+        logic_label.setFixedWidth(100)
+        logic_layout.addWidget(logic_label)
+        
+        self.logic_or_radio = QRadioButton("OR (either)")
+        self.logic_or_radio.setChecked(True)
+        self.logic_or_radio.setToolTip("File matches if it contains Identifier 1 OR Identifier 2")
+        self.logic_or_radio.toggled.connect(self._on_mapping_changed)
+        logic_layout.addWidget(self.logic_or_radio)
+        
+        self.logic_and_radio = QRadioButton("AND (both)")
+        self.logic_and_radio.setToolTip("File matches only if it contains BOTH Identifier 1 AND Identifier 2")
+        logic_layout.addWidget(self.logic_and_radio)
+        
+        logic_layout.addStretch()
+        mapping_layout.addLayout(logic_layout)
+        
         id_help = QLabel(
-            "Match files by ANY identifier.\n"
-            "e.g., PAN + Client Code"
+            "OR = file matches either identifier\n"
+            "AND = file must contain both identifiers"
         )
         id_help.setStyleSheet("color: gray; font-size: 10px;")
         mapping_layout.addWidget(id_help)
@@ -470,6 +489,7 @@ class TabExcel(QWidget):
             'bcc': get_value(self.bcc_combo),
             'identifier': get_value(self.identifier_combo),
             'identifier2': get_value(self.identifier2_combo),
+            'identifier_logic': 'OR' if self.logic_or_radio.isChecked() else 'AND',
         }
     
     def set_column_mapping(self, mapping: Dict[str, Optional[str]]) -> None:
