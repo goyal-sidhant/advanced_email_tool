@@ -2,6 +2,70 @@
 
 All notable changes to Advanced Email Tool are documented here.
 
+## [1.4.0] - 2026-01-02
+
+### Added
+
+#### Dark Mode 🌙
+- **Full dark theme** with Microsoft Blue accents
+- Three options via View → Theme menu:
+  - **System (Auto)** - Follows Windows dark/light setting
+  - **Light** - Classic light theme
+  - **Dark** - Dark mode for low-light use
+- Preference saved and restored on restart
+- All UI elements styled for both modes
+
+#### Theme-Aware Validation
+- Email validation colors adapt to theme
+- Dark mode uses softer red tones for better visibility
+- Success/error indicators adjust automatically
+
+### Technical
+- New `utils/theme_manager.py` module
+- New `resources/style_dark.qss` stylesheet (350+ lines)
+- Preferences saved to `preferences.json`
+- Windows registry detection for system theme
+
+---
+
+## [1.3.0] - 2026-01-02
+
+### Added
+
+#### UI Styling
+- **Professional stylesheet** with Microsoft Blue color scheme
+- Clean Windows-like appearance
+- Styled tabs, buttons, inputs, tables, progress bars
+- Consistent colors throughout the app
+- Dark tooltips with better readability
+
+#### Email Validation
+- **Auto-validates emails** when Excel is loaded
+- Invalid emails highlighted in **red** in preview table
+- Validation status indicator: "✓ All emails valid" or "⚠ X invalid"
+- Hover tooltip on invalid cells
+
+#### In-App Help (Tooltips)
+- Tooltips on all major UI elements
+- Detailed explanations for:
+  - Column mapping (To, CC, BCC, Identifiers)
+  - AND/OR logic
+  - Variable syntax `{ColumnName}`
+  - Static vs Variable attachments
+  - Preview mode
+  - Send interval
+
+#### New Outlook Detection
+- Detects if New Outlook is running (`olk.exe`)
+- Shows clear warning with instructions to switch back
+- Checks registry for UseNewOutlook setting
+
+### Changed
+- Improved error messages throughout
+- Better organized code structure
+
+---
+
 ## [1.2.0] - 2026-01-01
 
 ### Added

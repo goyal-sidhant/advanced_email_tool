@@ -5,7 +5,7 @@ Desktop application for bulk personalized email sending.
 Matches client-specific attachments using identifier patterns.
 
 Author: Sidhant
-Version: 1.0.0
+Version: 1.4.0
 """
 
 import sys
@@ -40,6 +40,12 @@ def main():
         logger = setup_logger()
         logger.info(f"Starting {config.APP_NAME} v{config.APP_VERSION}")
         
+        # Initialize theme manager
+        from utils.theme_manager import ThemeManager, set_theme_manager
+        theme_manager = ThemeManager(app)
+        set_theme_manager(theme_manager)
+        theme_manager.initialize()
+        
         # Check for required dependencies
         if not _check_dependencies():
             QMessageBox.critical(
@@ -52,7 +58,21 @@ def main():
         
         # Check for Outlook availability (Windows only)
         if sys.platform == 'win32':
-            if not _check_outlook():
+            outlook_status = _check_outlook()
+            if outlook_status == "new_outlook":
+                QMessageBox.warning(
+                    None,
+                    "New Outlook Detected",
+                    "⚠️ New Outlook detected!\n\n"
+                    "This app requires Outlook Classic, which supports automation.\n"
+                    "New Outlook is a web-based app and cannot be automated.\n\n"
+                    "To switch back to Classic Outlook:\n"
+                    "1. Open Outlook\n"
+                    "2. Go to Settings (gear icon)\n"
+                    "3. Toggle OFF 'New Outlook'\n\n"
+                    "The app will run, but email sending will not work until you switch."
+                )
+            elif outlook_status == "not_found":
                 QMessageBox.warning(
                     None,
                     "Outlook Not Available",
@@ -115,23 +135,52 @@ def _check_dependencies() -> bool:
     return True
 
 
-def _check_outlook() -> bool:
+def _check_outlook() -> str:
     """
-    Check if Outlook is available.
+    Check if Outlook is available and which version.
     
     Returns:
-        True if Outlook can be accessed
+        "ok" - Outlook Classic available
+        "new_outlook" - New Outlook detected (not supported)
+        "not_found" - Outlook not installed
     """
     if sys.platform != 'win32':
-        return False
+        return "not_found"
     
+    # First check if New Outlook process is running
+    try:
+        import subprocess
+        result = subprocess.run(
+            ['tasklist', '/FI', 'IMAGENAME eq olk.exe'],
+            capture_output=True, text=True, timeout=5
+        )
+        if 'olk.exe' in result.stdout:
+            return "new_outlook"
+    except Exception:
+        pass
+    
+    # Try to connect to Outlook Classic
     try:
         import win32com.client
         outlook = win32com.client.Dispatch("Outlook.Application")
         _ = outlook.GetNamespace("MAPI")
-        return True
+        return "ok"
     except Exception:
-        return False
+        # Check if New Outlook is installed but not running
+        try:
+            import winreg
+            key = winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Office\16.0\Outlook\Preferences"
+            )
+            value, _ = winreg.QueryValueEx(key, "UseNewOutlook")
+            winreg.CloseKey(key)
+            if value == 1:
+                return "new_outlook"
+        except Exception:
+            pass
+        
+        return "not_found"
 
 
 if __name__ == "__main__":

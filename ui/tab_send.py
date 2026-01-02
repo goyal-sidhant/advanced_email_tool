@@ -139,17 +139,28 @@ class TabSend(QWidget):
         options_layout = QHBoxLayout()
         
         interval_label = QLabel("Delay between emails:")
+        interval_label.setToolTip("Wait time between sending each email")
         options_layout.addWidget(interval_label)
         
         self.interval_spin = QSpinBox()
         self.interval_spin.setRange(1, 30)
         self.interval_spin.setValue(int(config.SEND_INTERVAL))
         self.interval_spin.setSuffix(" seconds")
+        self.interval_spin.setToolTip(
+            "Delay between sending emails.\n"
+            "Helps avoid triggering spam filters.\n"
+            "Recommended: 2-5 seconds."
+        )
         options_layout.addWidget(self.interval_spin)
         
         options_layout.addSpacing(20)
         
         self.preview_check = QCheckBox("Preview mode (display in Outlook, don't send)")
+        self.preview_check.setToolTip(
+            "Opens each email in Outlook for review.\n"
+            "You can then send manually or close.\n"
+            "Useful for testing before bulk send."
+        )
         options_layout.addWidget(self.preview_check)
         
         options_layout.addStretch()

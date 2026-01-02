@@ -11,7 +11,7 @@ from pathlib import Path
 # APPLICATION INFO
 # =============================================================================
 APP_NAME = "Advanced Email Tool"
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.4.0"
 APP_AUTHOR = "Sidhant"
 
 # =============================================================================
@@ -98,6 +98,15 @@ DEFAULT_FONT_FAMILY = "Segoe UI"
 DEFAULT_FONT_SIZE = 10
 EDITOR_FONT_FAMILY = "Segoe UI"
 EDITOR_FONT_SIZE = 11
+
+# Theme settings
+THEME_LIGHT = "light"
+THEME_DARK = "dark"
+THEME_SYSTEM = "system"  # Follow Windows setting
+DEFAULT_THEME = THEME_SYSTEM
+
+# Preferences file
+PREFERENCES_FILE = USER_DATA_DIR / "preferences.json"
 
 # =============================================================================
 # FILE MATCHING SETTINGS

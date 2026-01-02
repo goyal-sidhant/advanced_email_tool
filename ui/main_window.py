@@ -90,12 +90,62 @@ class MainWindow(QMainWindow):
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
         
+        # View menu
+        view_menu = menubar.addMenu("&View")
+        
+        # Theme submenu
+        theme_menu = view_menu.addMenu("🎨 Theme")
+        
+        self.theme_system_action = QAction("System (Auto)", self)
+        self.theme_system_action.setCheckable(True)
+        self.theme_system_action.triggered.connect(lambda: self._set_theme("system"))
+        theme_menu.addAction(self.theme_system_action)
+        
+        self.theme_light_action = QAction("☀️ Light", self)
+        self.theme_light_action.setCheckable(True)
+        self.theme_light_action.triggered.connect(lambda: self._set_theme("light"))
+        theme_menu.addAction(self.theme_light_action)
+        
+        self.theme_dark_action = QAction("🌙 Dark", self)
+        self.theme_dark_action.setCheckable(True)
+        self.theme_dark_action.triggered.connect(lambda: self._set_theme("dark"))
+        theme_menu.addAction(self.theme_dark_action)
+        
+        # Set initial check state
+        self._update_theme_menu_state()
+        
         # Help menu
         help_menu = menubar.addMenu("&Help")
         
         about_action = QAction("&About", self)
         about_action.triggered.connect(self._show_about)
         help_menu.addAction(about_action)
+    
+    def _set_theme(self, theme: str) -> None:
+        """
+        Set the application theme.
+        
+        Args:
+            theme: Theme name (light/dark/system)
+        """
+        from utils.theme_manager import get_theme_manager
+        
+        theme_manager = get_theme_manager()
+        if theme_manager:
+            theme_manager.set_theme(theme)
+            self._update_theme_menu_state()
+            self.logger.info(f"Theme changed to: {theme}")
+    
+    def _update_theme_menu_state(self) -> None:
+        """Update theme menu checkmarks based on current preference."""
+        from utils.theme_manager import get_theme_manager
+        
+        theme_manager = get_theme_manager()
+        if theme_manager:
+            current = theme_manager.load_preference()
+            self.theme_system_action.setChecked(current == "system")
+            self.theme_light_action.setChecked(current == "light")
+            self.theme_dark_action.setChecked(current == "dark")
     
     def _setup_tabs(self) -> None:
         """Set up tab widget and all tabs."""

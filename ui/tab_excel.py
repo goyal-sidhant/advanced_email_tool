@@ -9,11 +9,14 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox,
     QPushButton, QLabel, QComboBox, QTableWidget,
     QTableWidgetItem, QHeaderView, QFileDialog,
-    QMessageBox, QSplitter, QFrame, QSpinBox, QRadioButton
+    QMessageBox, QSplitter, QFrame, QSpinBox, QRadioButton,
+    QProgressDialog
 )
 from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QColor, QBrush
 
 from core.excel_handler import ExcelHandler
+from core.validators import is_valid_email
 from ui.components.dialogs import show_error, show_info, show_file_dialog, show_save_dialog
 from utils import get_logger
 
@@ -153,8 +156,10 @@ class TabExcel(QWidget):
         to_layout = QHBoxLayout()
         to_label = QLabel("To Email *:")
         to_label.setFixedWidth(100)
+        to_label.setToolTip("Required. Column containing recipient email addresses.")
         to_layout.addWidget(to_label)
         self.to_combo = QComboBox()
+        self.to_combo.setToolTip("Select the column with recipient email addresses")
         self.to_combo.currentIndexChanged.connect(self._on_mapping_changed)
         to_layout.addWidget(self.to_combo)
         mapping_layout.addLayout(to_layout)
@@ -163,8 +168,10 @@ class TabExcel(QWidget):
         cc_layout = QHBoxLayout()
         cc_label = QLabel("CC:")
         cc_label.setFixedWidth(100)
+        cc_label.setToolTip("Optional. Carbon Copy recipients.")
         cc_layout.addWidget(cc_label)
         self.cc_combo = QComboBox()
+        self.cc_combo.setToolTip("Column with CC email addresses (optional)")
         self.cc_combo.currentIndexChanged.connect(self._on_mapping_changed)
         cc_layout.addWidget(self.cc_combo)
         mapping_layout.addLayout(cc_layout)
@@ -173,8 +180,10 @@ class TabExcel(QWidget):
         bcc_layout = QHBoxLayout()
         bcc_label = QLabel("BCC:")
         bcc_label.setFixedWidth(100)
+        bcc_label.setToolTip("Optional. Blind Carbon Copy - recipients won't see each other.")
         bcc_layout.addWidget(bcc_label)
         self.bcc_combo = QComboBox()
+        self.bcc_combo.setToolTip("Column with BCC email addresses (optional)")
         self.bcc_combo.currentIndexChanged.connect(self._on_mapping_changed)
         bcc_layout.addWidget(self.bcc_combo)
         mapping_layout.addLayout(bcc_layout)
@@ -189,8 +198,14 @@ class TabExcel(QWidget):
         id1_layout = QHBoxLayout()
         id1_label = QLabel("Identifier 1:")
         id1_label.setFixedWidth(100)
+        id1_label.setToolTip(
+            "Column used to match attachment files.\n"
+            "Files with this value in their filename will be attached.\n"
+            "e.g., If identifier is 'PAN001', file 'PAN001_report.pdf' matches."
+        )
         id1_layout.addWidget(id1_label)
         self.identifier_combo = QComboBox()
+        self.identifier_combo.setToolTip("Select column for attachment matching (e.g., PAN, Client Code)")
         self.identifier_combo.currentIndexChanged.connect(self._on_mapping_changed)
         id1_layout.addWidget(self.identifier_combo)
         mapping_layout.addLayout(id1_layout)
@@ -199,8 +214,10 @@ class TabExcel(QWidget):
         id2_layout = QHBoxLayout()
         id2_label = QLabel("Identifier 2:")
         id2_label.setFixedWidth(100)
+        id2_label.setToolTip("Optional second identifier for attachment matching.")
         id2_layout.addWidget(id2_label)
         self.identifier2_combo = QComboBox()
+        self.identifier2_combo.setToolTip("Optional: Use two identifiers with AND/OR logic")
         self.identifier2_combo.currentIndexChanged.connect(self._on_mapping_changed)
         id2_layout.addWidget(self.identifier2_combo)
         mapping_layout.addLayout(id2_layout)
@@ -209,6 +226,7 @@ class TabExcel(QWidget):
         logic_layout = QHBoxLayout()
         logic_label = QLabel("Match logic:")
         logic_label.setFixedWidth(100)
+        logic_label.setToolTip("How to combine Identifier 1 and Identifier 2")
         logic_layout.addWidget(logic_label)
         
         self.logic_or_radio = QRadioButton("OR (either)")
@@ -245,10 +263,22 @@ class TabExcel(QWidget):
         preview_group = QGroupBox("Data Preview")
         preview_layout = QVBoxLayout(preview_group)
         
+        # Validation status row
+        validation_row = QHBoxLayout()
+        self.validation_label = QLabel("")
+        validation_row.addWidget(self.validation_label)
+        validation_row.addStretch()
+        
+        self.preview_count_label = QLabel("")
+        self.preview_count_label.setStyleSheet("color: gray;")
+        validation_row.addWidget(self.preview_count_label)
+        preview_layout.addLayout(validation_row)
+        
         self.preview_table = QTableWidget()
         self.preview_table.setAlternatingRowColors(True)
         self.preview_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.preview_table.horizontalHeader().setStretchLastSection(True)
+        self.preview_table.setToolTip("Red rows indicate invalid email addresses")
         preview_layout.addWidget(self.preview_table)
         
         splitter.addWidget(preview_group)
@@ -403,6 +433,7 @@ class TabExcel(QWidget):
     def _populate_preview_table(self, max_rows: int = 100) -> None:
         """
         Populate the preview table with data.
+        Validates emails and highlights invalid ones in red.
         
         Args:
             max_rows: Maximum rows to show in preview
@@ -412,6 +443,7 @@ class TabExcel(QWidget):
         if not self._data:
             self.preview_table.setRowCount(0)
             self.preview_table.setColumnCount(0)
+            self._update_validation_status(0, 0)
             return
         
         # Set up columns
@@ -422,16 +454,76 @@ class TabExcel(QWidget):
         preview_data = self._data[:max_rows]
         self.preview_table.setRowCount(len(preview_data))
         
+        # Get email column for validation
+        email_column = self.to_combo.currentText() if hasattr(self, 'to_combo') else None
+        email_col_idx = self._columns.index(email_column) if email_column and email_column in self._columns else -1
+        
+        # Get theme-aware colors for validation
+        try:
+            from utils.theme_manager import get_theme_manager
+            theme_manager = get_theme_manager()
+            is_dark = theme_manager.is_dark_mode() if theme_manager else False
+        except:
+            is_dark = False
+        
+        if is_dark:
+            invalid_bg = QBrush(QColor("#4A1F1F"))  # Dark red
+            invalid_fg = QColor("#F48771")  # Light red text
+        else:
+            invalid_bg = QBrush(QColor("#FFEBEE"))  # Light red
+            invalid_fg = QColor("#DC3545")  # Red text
+        
+        # Track invalid count
+        invalid_count = 0
+        
         # Populate cells
         for row_idx, row_data in enumerate(preview_data):
             for col_idx, col_name in enumerate(self._columns):
                 value = str(row_data.get(col_name, ""))
                 item = QTableWidgetItem(value)
                 item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                
+                # Validate email column
+                if col_idx == email_col_idx and value.strip():
+                    if not is_valid_email(value.strip()):
+                        item.setBackground(invalid_bg)
+                        item.setForeground(invalid_fg)
+                        item.setToolTip("Invalid email format")
+                        invalid_count += 1
+                
                 self.preview_table.setItem(row_idx, col_idx, item)
         
         # Resize columns to content
         self.preview_table.resizeColumnsToContents()
+        
+        # Update validation status
+        self._update_validation_status(len(preview_data), invalid_count)
+    
+    def _update_validation_status(self, total: int, invalid: int) -> None:
+        """Update the validation status label."""
+        if not hasattr(self, 'validation_label'):
+            return
+        
+        # Get theme-aware colors
+        try:
+            from utils.theme_manager import get_theme_manager
+            theme_manager = get_theme_manager()
+            is_dark = theme_manager.is_dark_mode() if theme_manager else False
+        except:
+            is_dark = False
+        
+        success_color = "#4EC9B0" if is_dark else "#28A745"
+        error_color = "#F48771" if is_dark else "#DC3545"
+        
+        if total == 0:
+            self.validation_label.setText("")
+            self.validation_label.setStyleSheet("")
+        elif invalid == 0:
+            self.validation_label.setText(f"✓ All {total} emails valid")
+            self.validation_label.setStyleSheet(f"color: {success_color}; font-weight: bold;")
+        else:
+            self.validation_label.setText(f"⚠ {invalid} invalid email(s)")
+            self.validation_label.setStyleSheet(f"color: {error_color}; font-weight: bold;")
     
     def _on_mapping_changed(self) -> None:
         """Handle column mapping changes."""

@@ -57,30 +57,35 @@ class TabCompose(QWidget):
         
         self.template_combo = QComboBox()
         self.template_combo.setMinimumWidth(200)
+        self.template_combo.setToolTip("Select a saved template or create new")
         self.template_combo.addItem("-- New Template --")
         self._refresh_template_list()
         template_layout.addWidget(self.template_combo)
         
         self.load_btn = QPushButton("Load")
+        self.load_btn.setToolTip("Load the selected template")
         self.load_btn.clicked.connect(self._load_template)
         template_layout.addWidget(self.load_btn)
         
         self.save_btn = QPushButton("Save")
+        self.save_btn.setToolTip("Save changes to current template")
         self.save_btn.clicked.connect(self._save_template)
         template_layout.addWidget(self.save_btn)
         
         self.save_as_btn = QPushButton("Save As...")
+        self.save_as_btn.setToolTip("Save as a new template")
         self.save_as_btn.clicked.connect(self._save_template_as)
         template_layout.addWidget(self.save_as_btn)
         
         self.delete_btn = QPushButton("Delete")
+        self.delete_btn.setToolTip("Delete the selected template")
         self.delete_btn.clicked.connect(self._delete_template)
         template_layout.addWidget(self.delete_btn)
         
         template_layout.addSpacing(20)
         
         self.import_btn = QPushButton("Import File...")
-        self.import_btn.setToolTip("Import content from Word (.docx) or Text (.txt) file")
+        self.import_btn.setToolTip("Import content from Word (.docx), Text (.txt), or HTML file")
         self.import_btn.clicked.connect(self._import_file)
         template_layout.addWidget(self.import_btn)
         
@@ -96,15 +101,21 @@ class TabCompose(QWidget):
         
         self.subject_input = QLineEdit()
         self.subject_input.setPlaceholderText("Enter subject with {Variables} from Excel columns...")
+        self.subject_input.setToolTip(
+            "Use {ColumnName} to insert values from Excel.\n"
+            "e.g., 'Reminder for {ClientName} - {Month}'"
+        )
         self.subject_input.textChanged.connect(self._on_content_changed)
         subject_input_layout.addWidget(self.subject_input)
         
         self.subject_var_combo = QComboBox()
         self.subject_var_combo.setFixedWidth(150)
+        self.subject_var_combo.setToolTip("Select a column to insert as variable")
         self.subject_var_combo.addItem("Insert Variable")
         subject_input_layout.addWidget(self.subject_var_combo)
         
         self.subject_insert_btn = QPushButton("Insert")
+        self.subject_insert_btn.setToolTip("Insert selected variable at cursor")
         self.subject_insert_btn.clicked.connect(self._insert_subject_variable)
         subject_input_layout.addWidget(self.subject_insert_btn)
         

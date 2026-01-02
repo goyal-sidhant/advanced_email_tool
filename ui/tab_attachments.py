@@ -108,14 +108,20 @@ class TabAttachments(QWidget):
         folder_layout = QHBoxLayout()
         
         folder_label = QLabel("Folder:")
+        folder_label.setToolTip("Folder containing files to match with identifiers")
         folder_layout.addWidget(folder_label)
         
         self.folder_input = QLineEdit()
         self.folder_input.setPlaceholderText("Select folder containing client files...")
         self.folder_input.setReadOnly(True)
+        self.folder_input.setToolTip(
+            "Files in this folder will be matched to recipients.\n"
+            "If identifier is 'PAN001', any file with 'PAN001' in name matches."
+        )
         folder_layout.addWidget(self.folder_input)
         
         self.browse_btn = QPushButton("Browse...")
+        self.browse_btn.setToolTip("Select folder with attachment files")
         self.browse_btn.clicked.connect(self._browse_folder)
         folder_layout.addWidget(self.browse_btn)
         
@@ -125,12 +131,14 @@ class TabAttachments(QWidget):
         options_layout = QHBoxLayout()
         
         self.recursive_check = QCheckBox("Include subfolders")
+        self.recursive_check.setToolTip("Also search files in subfolders")
         self.recursive_check.setChecked(False)
         options_layout.addWidget(self.recursive_check)
         
         options_layout.addStretch()
         
         self.scan_btn = QPushButton("Scan Folder")
+        self.scan_btn.setToolTip("Index all files in folder for matching")
         self.scan_btn.clicked.connect(self._scan_folder)
         self.scan_btn.setEnabled(False)
         options_layout.addWidget(self.scan_btn)

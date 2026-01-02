@@ -1,28 +1,39 @@
 # Roadmap
 
-## Current Version: 1.2.0
+## Current Version: 1.4.0
 
 ---
 
 ## ✅ Recently Completed
 
+### Dark Mode ✓
+**Status:** COMPLETE (v1.4.0)
+
+- Full dark theme stylesheet
+- View → Theme menu with 3 options:
+  - System (Auto) - follows Windows setting
+  - Light
+  - Dark
+- Preference saved to preferences.json
+- Theme-aware validation colors
+
+### UI Styling ✓
+**Status:** COMPLETE (v1.3.0)
+
+### Email Validation ✓
+**Status:** COMPLETE (v1.3.0)
+
+### In-App Help (Tooltips) ✓
+**Status:** COMPLETE (v1.3.0)
+
+### New Outlook Detection ✓
+**Status:** COMPLETE (v1.3.0)
+
 ### Table in Email Body ✓
 **Status:** COMPLETE (v1.2.0)
 
-- Paste Table button in Compose toolbar
-- Copy from Excel → Click Paste Table → Styled HTML table
-- First row styled as header
-- Keyboard shortcut: `Ctrl+Shift+V`
-
 ### Image in Email Body ✓
 **Status:** COMPLETE (v1.2.0)
-
-- Insert Image menu with 3 options:
-  - From File...
-  - From Clipboard
-  - Drag & Drop (onto editor)
-- CID attachment method (Outlook-native)
-- Static images only (same for all recipients)
 
 ---
 
@@ -204,12 +215,11 @@ def check_outlook_type():
 ```
 1. [P1] Table in Email Body       ✅ DONE (v1.2.0)
 2. [P1] Image in Email Body       ✅ DONE (v1.2.0)
-3. [P2] UI Styling                🔜 NEXT
-4. [P2] Better Error Handling     Queued
-5. [P2] In-App Help (Tooltips)    Queued
-6. [P3] Create .exe               Later
-7. [P3] New Outlook Warning       Later
-8. [P3] Dark Mode                 Future
+3. [P2] UI Styling                ✅ DONE (v1.3.0)
+4. [P2] Better Error Handling     ✅ DONE (v1.3.0) - New Outlook, Email validation
+5. [P2] In-App Help (Tooltips)    ✅ DONE (v1.3.0)
+6. [P3] Dark Mode                 ✅ DONE (v1.4.0)
+7. [P3] Create .exe               🅿️ PARKED (user request)
 ```
 
 ---
