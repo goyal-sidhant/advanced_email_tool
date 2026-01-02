@@ -45,6 +45,20 @@ def validate_email_address(email: str) -> Tuple[bool, str]:
     return True, ""
 
 
+def is_valid_email(email: str) -> bool:
+    """
+    Simple check if an email address is valid.
+    
+    Args:
+        email: Email address to check
+        
+    Returns:
+        True if valid, False otherwise
+    """
+    is_valid, _ = validate_email_address(email)
+    return is_valid
+
+
 def validate_email_list(email_string: str, separator: str = ';') -> Tuple[bool, List[str], List[str]]:
     """
     Validate a string containing one or more email addresses.
