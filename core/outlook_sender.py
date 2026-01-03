@@ -148,10 +148,10 @@ class OutlookSender:
     def select_account_by_index(self, index: int) -> bool:
         """
         Select an account by list index.
-        
+
         Args:
             index: 0-based index in accounts list
-            
+
         Returns:
             True if valid index
         """
@@ -160,6 +160,15 @@ class OutlookSender:
             self.logger.info(f"Selected account: {self.selected_account.email}")
             return True
         return False
+
+    def get_selected_account(self) -> Optional[OutlookAccount]:
+        """
+        Get the currently selected account.
+
+        Returns:
+            The selected OutlookAccount, or None if no account selected
+        """
+        return self.selected_account
     
     def is_online(self) -> Tuple[bool, str]:
         """

@@ -2,6 +2,35 @@
 
 All notable changes to Advanced Email Tool are documented here.
 
+## [1.5.0] - 2026-01-03
+
+### Added
+
+#### Profile System
+- **Save Profile** (`Ctrl+Shift+S`) - Export all settings to a shareable JSON file
+- **Load Profile** (`Ctrl+Shift+O`) - Import settings from a profile file
+- **Profile Info** - View what's included in a profile
+- Profiles contain:
+  - Excel file path and column mappings
+  - Email subject and body templates
+  - Static and variable attachment settings
+  - BCC settings
+- Share profiles with colleagues or reuse for recurring campaigns
+- Warnings for missing files when loading profiles
+
+### Fixed
+
+#### Semicolon-Separated Emails
+- Emails with `;` separator (e.g., `a@test.com;b@test.com`) now validate correctly
+- Both single emails and multiple emails in one cell are supported
+- Validation checks each email individually
+
+#### Test Email Crash
+- Fixed crash when clicking "Send Test Email First" button
+- Added missing `get_selected_account()` method to OutlookSender
+
+---
+
 ## [1.4.0] - 2026-01-02
 
 ### Added

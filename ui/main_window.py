@@ -18,7 +18,7 @@ from ui.tab_attachments import TabAttachments
 from ui.tab_recipients import TabRecipients
 from ui.tab_preview import TabPreview
 from ui.tab_send import TabSend
-from ui.components.dialogs import show_question, show_info, show_warning
+from ui.components.dialogs import show_question, show_info, show_warning, show_error, show_file_dialog, show_save_dialog
 
 from core.email_builder import EmailBuilder
 from data.session_manager import SessionManager, AutoSaveManager
@@ -84,12 +84,33 @@ class MainWindow(QMainWindow):
         file_menu.addAction(save_action)
         
         file_menu.addSeparator()
-        
+
         exit_action = QAction("E&xit", self)
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
-        
+
+        # Profile menu
+        profile_menu = menubar.addMenu("&Profile")
+
+        save_profile_action = QAction("💾 &Save Profile...", self)
+        save_profile_action.setShortcut("Ctrl+Shift+S")
+        save_profile_action.setToolTip("Save all settings to a shareable profile file")
+        save_profile_action.triggered.connect(self._save_profile)
+        profile_menu.addAction(save_profile_action)
+
+        load_profile_action = QAction("📂 &Load Profile...", self)
+        load_profile_action.setShortcut("Ctrl+Shift+O")
+        load_profile_action.setToolTip("Load settings from a profile file")
+        load_profile_action.triggered.connect(self._load_profile)
+        profile_menu.addAction(load_profile_action)
+
+        profile_menu.addSeparator()
+
+        profile_info_action = QAction("ℹ️ Profile &Info", self)
+        profile_info_action.triggered.connect(self._show_profile_info)
+        profile_menu.addAction(profile_info_action)
+
         # View menu
         view_menu = menubar.addMenu("&View")
         
@@ -528,6 +549,224 @@ class MainWindow(QMainWindow):
         # Save session
         self.auto_save_manager.save_now()
         self.auto_save_manager.stop()
-        
+
         self.logger.info("Application closing")
         event.accept()
+
+    def _get_profile_state(self) -> Dict[str, Any]:
+        """
+        Get current state as a shareable profile.
+
+        Returns:
+            Dictionary with all profile settings
+        """
+        import os
+        from datetime import datetime
+
+        mapping = self.tab_excel.get_column_mapping()
+        excel_path = self.tab_excel.get_file_path() or ''
+
+        return {
+            '_profile_metadata': {
+                'version': config.APP_VERSION,
+                'created_at': datetime.now().isoformat(),
+                'description': 'Email Tool Profile',
+            },
+            'excel': {
+                'file_path': excel_path,
+                'file_name': os.path.basename(excel_path) if excel_path else '',
+                'column_mapping': mapping,
+            },
+            'compose': {
+                'subject_template': self.tab_compose.get_subject_template(),
+                'body_template': self.tab_compose.get_body_template(),
+                'universal_bcc': self.tab_compose.get_universal_bcc() or '',
+            },
+            'attachments': {
+                'static_attachments': self.tab_attachments.get_static_attachments(),
+                'attachment_folder': self.tab_attachments.get_attachment_folder() or '',
+                'attachment_recursive': self.tab_attachments.is_recursive(),
+            },
+            'send': {
+                'selected_account': self.tab_send.get_selected_account() or '',
+            },
+        }
+
+    def _save_profile(self) -> None:
+        """Save current settings to a profile file."""
+        import json
+        import os
+
+        # Get save path
+        save_path = show_save_dialog(
+            self,
+            "Save Profile",
+            "JSON Files (*.json);;All Files (*.*)",
+            default_name="email_profile.json"
+        )
+
+        if not save_path:
+            return
+
+        # Ensure .json extension
+        if not save_path.lower().endswith('.json'):
+            save_path += '.json'
+
+        try:
+            profile = self._get_profile_state()
+
+            with open(save_path, 'w', encoding='utf-8') as f:
+                json.dump(profile, f, indent=2, ensure_ascii=False)
+
+            show_info(
+                self,
+                "Profile Saved",
+                f"Profile saved to:\n{os.path.basename(save_path)}\n\n"
+                f"You can share this file with others or use it to quickly "
+                f"restore your email settings."
+            )
+            self.status_bar.showMessage(f"Profile saved: {os.path.basename(save_path)}")
+            self.logger.info(f"Profile saved to: {save_path}")
+
+        except Exception as e:
+            show_error(self, "Save Error", f"Could not save profile:\n{e}")
+            self.logger.error(f"Profile save error: {e}")
+
+    def _load_profile(self) -> None:
+        """Load settings from a profile file."""
+        import json
+        import os
+
+        # Get load path
+        load_path = show_file_dialog(
+            self,
+            "Load Profile",
+            "JSON Files (*.json);;All Files (*.*)"
+        )
+
+        if not load_path:
+            return
+
+        try:
+            with open(load_path, 'r', encoding='utf-8') as f:
+                profile = json.load(f)
+
+            # Validate it's a profile
+            if '_profile_metadata' not in profile and 'excel' not in profile:
+                show_error(
+                    self,
+                    "Invalid Profile",
+                    "This file does not appear to be a valid email profile."
+                )
+                return
+
+            # Confirm loading
+            reply = show_question(
+                self,
+                "Load Profile?",
+                f"Load profile from:\n{os.path.basename(load_path)}\n\n"
+                f"This will replace your current settings.\n"
+                f"Continue?"
+            )
+
+            if not reply:
+                return
+
+            self._apply_profile(profile)
+
+            show_info(self, "Profile Loaded", "Profile loaded successfully!")
+            self.status_bar.showMessage(f"Profile loaded: {os.path.basename(load_path)}")
+            self.logger.info(f"Profile loaded from: {load_path}")
+
+        except json.JSONDecodeError as e:
+            show_error(self, "Load Error", f"Invalid JSON file:\n{e}")
+        except Exception as e:
+            show_error(self, "Load Error", f"Could not load profile:\n{e}")
+            self.logger.error(f"Profile load error: {e}")
+
+    def _apply_profile(self, profile: Dict[str, Any]) -> None:
+        """
+        Apply a loaded profile to the application.
+
+        Args:
+            profile: Profile dictionary to apply
+        """
+        import os
+
+        # Restore Excel file if exists
+        excel_config = profile.get('excel', {})
+        excel_path = excel_config.get('file_path', '')
+
+        if excel_path and os.path.exists(excel_path):
+            self.tab_excel.load_file_path(excel_path)
+
+            # Restore column mapping after file is loaded
+            mapping = excel_config.get('column_mapping', {})
+            if mapping:
+                self.tab_excel.set_column_mapping(mapping)
+        elif excel_path:
+            show_warning(
+                self,
+                "Excel File Not Found",
+                f"The Excel file in the profile was not found:\n"
+                f"{excel_path}\n\n"
+                f"Please load the Excel file manually."
+            )
+
+        # Restore compose settings
+        compose_config = profile.get('compose', {})
+        self.tab_compose.set_subject_template(compose_config.get('subject_template', ''))
+        self.tab_compose.set_body_template(compose_config.get('body_template', ''))
+        self.tab_compose.set_universal_bcc(compose_config.get('universal_bcc', ''))
+
+        # Restore attachments
+        attach_config = profile.get('attachments', {})
+
+        static = attach_config.get('static_attachments', [])
+        # Filter to only existing files
+        existing_static = [f for f in static if os.path.exists(f)]
+        if existing_static:
+            self.tab_attachments.set_static_attachments(existing_static)
+        if len(existing_static) < len(static):
+            show_warning(
+                self,
+                "Some Attachments Missing",
+                f"{len(static) - len(existing_static)} static attachment(s) "
+                f"were not found and will be skipped."
+            )
+
+        folder = attach_config.get('attachment_folder', '')
+        if folder and os.path.exists(folder):
+            self.tab_attachments.set_folder(
+                folder,
+                attach_config.get('attachment_recursive', False)
+            )
+        elif folder:
+            show_warning(
+                self,
+                "Attachment Folder Not Found",
+                f"The attachment folder was not found:\n{folder}"
+            )
+
+    def _show_profile_info(self) -> None:
+        """Show information about what a profile contains."""
+        QMessageBox.information(
+            self,
+            "About Profiles",
+            "<h3>What is a Profile?</h3>"
+            "<p>A profile saves your email settings to a file that can be:</p>"
+            "<ul>"
+            "<li><b>Shared</b> - Send to colleagues to use the same settings</li>"
+            "<li><b>Reused</b> - Load for recurring email campaigns</li>"
+            "<li><b>Backed up</b> - Keep a copy of your configuration</li>"
+            "</ul>"
+            "<h4>What's saved in a profile:</h4>"
+            "<ul>"
+            "<li>Excel file path and column mappings</li>"
+            "<li>Email subject and body templates</li>"
+            "<li>Static and variable attachment settings</li>"
+            "<li>BCC settings</li>"
+            "</ul>"
+            "<p><i>Note: The actual Excel data and attachments are not stored "
+            "in the profile - only the paths and settings.</i></p>"
+        )

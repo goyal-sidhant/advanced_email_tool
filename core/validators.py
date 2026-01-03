@@ -48,15 +48,34 @@ def validate_email_address(email: str) -> Tuple[bool, str]:
 def is_valid_email(email: str) -> bool:
     """
     Simple check if an email address is valid.
-    
+    Supports multiple emails separated by semicolons.
+
     Args:
-        email: Email address to check
-        
+        email: Email address or semicolon-separated list of emails
+
     Returns:
-        True if valid, False otherwise
+        True if all emails are valid, False otherwise
     """
-    is_valid, _ = validate_email_address(email)
-    return is_valid
+    if not email:
+        return False
+
+    email = email.strip()
+
+    # Check if contains semicolon separator (multiple emails)
+    if ';' in email:
+        emails = [e.strip() for e in email.split(';') if e.strip()]
+        if not emails:
+            return False
+        # All emails must be valid
+        for single_email in emails:
+            is_valid, _ = validate_email_address(single_email)
+            if not is_valid:
+                return False
+        return True
+    else:
+        # Single email
+        is_valid, _ = validate_email_address(email)
+        return is_valid
 
 
 def validate_email_list(email_string: str, separator: str = ';') -> Tuple[bool, List[str], List[str]]:
