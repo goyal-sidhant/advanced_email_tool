@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (
     QWidget, QListWidget, QListWidgetItem, QLineEdit, QTextEdit,
     QVBoxLayout, QFrame
 )
-from PyQt5.QtCore import Qt, QPoint, QEvent, QTimer
+from PyQt5.QtCore import Qt, QPoint, QEvent, QTimer, QObject
 from PyQt5.QtGui import QKeyEvent, QFocusEvent
 
 
@@ -21,15 +21,18 @@ class VariableCompleterPopup(QFrame):
     """
 
     def __init__(self, parent=None):
-        super().__init__(parent, Qt.Popup | Qt.FramelessWindowHint)
+        super().__init__(parent, Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setFrameStyle(QFrame.Box | QFrame.Plain)
         self.setLineWidth(1)
+        self.setFocusPolicy(Qt.NoFocus)  # Don't steal focus from input
+        self.setAttribute(Qt.WA_ShowWithoutActivating)  # Show without activating/taking focus
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
         self.list_widget = QListWidget()
+        self.list_widget.setFocusPolicy(Qt.NoFocus)  # Don't steal focus
         self.list_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.list_widget.itemClicked.connect(self._on_item_clicked)
         self.list_widget.itemDoubleClicked.connect(self._on_item_clicked)
@@ -135,13 +138,14 @@ class VariableCompleterPopup(QFrame):
         self.hide()
 
 
-class LineEditCompleter:
+class LineEditCompleter(QObject):
     """
     Attaches variable completion to a QLineEdit.
     Shows popup when user types '{' and inserts '{VariableName} ' on selection.
     """
 
     def __init__(self, line_edit: QLineEdit):
+        super().__init__(line_edit)
         self.line_edit = line_edit
         self.popup = VariableCompleterPopup()
         self._variables: List[str] = []
@@ -254,13 +258,14 @@ class LineEditCompleter:
         self._trigger_pos = -1
 
 
-class TextEditCompleter:
+class TextEditCompleter(QObject):
     """
     Attaches variable completion to a QTextEdit.
     Shows popup when user types '{' and inserts '{VariableName} ' on selection.
     """
 
     def __init__(self, text_edit: QTextEdit):
+        super().__init__(text_edit)
         self.text_edit = text_edit
         self.popup = VariableCompleterPopup()
         self._variables: List[str] = []
