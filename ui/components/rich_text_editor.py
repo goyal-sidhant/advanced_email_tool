@@ -20,6 +20,8 @@ from PyQt5.QtGui import (
     QImageReader, QTextDocumentFragment
 )
 
+from ui.components.variable_completer import TextEditCompleter
+
 
 class RichTextEditor(QWidget):
     """
@@ -68,7 +70,10 @@ class RichTextEditor(QWidget):
         self.editor.setAcceptRichText(True)
         self.editor.setAcceptDrops(True)
         self.splitter.addWidget(self.editor)
-        
+
+        # Variable autocomplete (shows popup when typing '{')
+        self._text_completer = TextEditCompleter(self.editor)
+
         # Install event filter for drag-drop
         self.editor.installEventFilter(self)
         
@@ -411,7 +416,7 @@ class RichTextEditor(QWidget):
     def set_available_variables(self, variables: List[str]) -> None:
         """
         Set available variables for insertion.
-        
+
         Args:
             variables: List of column names
         """
@@ -420,6 +425,9 @@ class RichTextEditor(QWidget):
         self.var_combo.addItem("-- Select Column --")
         for var in variables:
             self.var_combo.addItem(var)
+
+        # Update autocomplete popup
+        self._text_completer.set_variables(variables)
     
     def set_html(self, html: str) -> None:
         """

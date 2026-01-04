@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, pyqtSignal
 
 from ui.components.file_list import MatchedFileListWidget
+from ui.components.variable_completer import LineEditCompleter
 from core.template_engine import TemplateEngine
 from core.email_builder import EmailBuilder
 from utils import get_logger, format_bytes
@@ -96,11 +97,14 @@ class TabPreview(QWidget):
         format_layout.addWidget(self.custom_format_label)
         
         self.custom_format_input = QLineEdit()
-        self.custom_format_input.setPlaceholderText("e.g., {Name} <{Email}>")
+        self.custom_format_input.setPlaceholderText("e.g., {Name} <{Email}> - Type '{' for suggestions")
         self.custom_format_input.setVisible(False)
         self.custom_format_input.setMinimumWidth(200)
         self.custom_format_input.editingFinished.connect(self._refresh_recipient_list)
         format_layout.addWidget(self.custom_format_input)
+
+        # Variable autocomplete for custom format (shows popup when typing '{')
+        self._format_completer = LineEditCompleter(self.custom_format_input)
         
         format_layout.addStretch()
         
@@ -220,7 +224,10 @@ class TabPreview(QWidget):
         self._columns = columns or []
         self._name_column = name_column
         self._identifier_column = identifier_column
-        
+
+        # Update custom format autocomplete with available columns
+        self._format_completer.set_variables(self._columns)
+
         # Auto-detect name column if not provided
         if not self._name_column and columns:
             for col in columns:

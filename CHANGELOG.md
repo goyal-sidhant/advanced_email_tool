@@ -2,6 +2,31 @@
 
 All notable changes to Advanced Email Tool are documented here.
 
+## [1.6.0] - 2026-01-04
+
+### Added
+
+#### Variable Autocomplete (IntelliSense)
+- **Type `{` to see suggestions** - Dropdown appears with all available Excel columns
+- Works in three locations:
+  - Subject line (Compose tab)
+  - Email body (Compose tab)
+  - Custom display format (Preview tab)
+- **Case-insensitive filtering** - Type `{na` to find `Name`, `NAME`, etc.
+- **Keyboard navigation** - Use Arrow keys + Enter to select
+- **Mouse support** - Click to select variable
+- **Auto-completion** - Inserts `{ColumnName} ` with closing brace and space
+- Prevents typos in variable names
+- No need to remember exact column names
+
+### Technical
+- New `ui/components/variable_completer.py` module
+- `LineEditCompleter` class for QLineEdit widgets
+- `TextEditCompleter` class for QTextEdit widgets
+- Popup styled with Microsoft Blue accent color
+
+---
+
 ## [1.5.0] - 2026-01-03
 
 ### Added

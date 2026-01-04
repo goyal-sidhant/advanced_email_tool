@@ -14,6 +14,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 
 from ui.components.rich_text_editor import RichTextEditor
 from ui.components.dialogs import show_error, show_info, show_warning, InputDialog
+from ui.components.variable_completer import LineEditCompleter
 from data.template_storage import TemplateStorage
 from core.template_engine import TemplateEngine
 from utils import get_logger
@@ -103,10 +104,14 @@ class TabCompose(QWidget):
         self.subject_input.setPlaceholderText("Enter subject with {Variables} from Excel columns...")
         self.subject_input.setToolTip(
             "Use {ColumnName} to insert values from Excel.\n"
+            "Type '{' to see available columns.\n"
             "e.g., 'Reminder for {ClientName} - {Month}'"
         )
         self.subject_input.textChanged.connect(self._on_content_changed)
         subject_input_layout.addWidget(self.subject_input)
+
+        # Variable autocomplete for subject (shows popup when typing '{')
+        self._subject_completer = LineEditCompleter(self.subject_input)
         
         self.subject_var_combo = QComboBox()
         self.subject_var_combo.setFixedWidth(150)
@@ -307,21 +312,24 @@ class TabCompose(QWidget):
     def set_available_columns(self, columns: List[str]) -> None:
         """
         Set available columns for variable insertion.
-        
+
         Args:
             columns: List of column names from Excel
         """
         self._available_columns = columns
-        
+
         # Update subject variable dropdown
         self.subject_var_combo.clear()
         self.subject_var_combo.addItem("Insert Variable")
         for col in columns:
             self.subject_var_combo.addItem(col)
-        
-        # Update body editor
+
+        # Update subject autocomplete
+        self._subject_completer.set_variables(columns)
+
+        # Update body editor (includes its own autocomplete)
         self.body_editor.set_available_variables(columns)
-        
+
         # Update info
         self._update_variable_info()
     
