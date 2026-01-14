@@ -49,8 +49,12 @@ class OutlookSender:
             Tuple of (success, error_message)
         """
         try:
+            import pythoncom
             import win32com.client
-            
+
+            # Initialize COM for this thread (required for background threads)
+            pythoncom.CoInitialize()
+
             self.logger.info("Initializing Outlook connection...")
             
             # Use EnsureDispatch for more stable COM connection
@@ -84,10 +88,12 @@ class OutlookSender:
     def _get_fresh_outlook(self):
         """
         Get a fresh Outlook Application object.
-        
+
         This helps avoid stale COM connection issues.
         """
+        import pythoncom
         import win32com.client
+        pythoncom.CoInitialize()
         try:
             # Try EnsureDispatch first
             return win32com.client.gencache.EnsureDispatch("Outlook.Application")
