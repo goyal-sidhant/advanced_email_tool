@@ -96,7 +96,17 @@ class EmailBuilder:
         
         # Embedded images (inline in body, same for all recipients)
         self.embedded_images: List[Dict[str, Any]] = []
-    
+
+    def _find_key(self, data: Dict[str, Any], key: str) -> Optional[str]:
+        """Find actual key in dictionary using case-insensitive match."""
+        if not key:
+            return None
+        key_lower = key.lower()
+        for k in data.keys():
+            if k.lower() == key_lower:
+                return k
+        return None
+
     def set_templates(self, subject: str, body: str) -> None:
         """
         Set email templates.
@@ -191,20 +201,23 @@ class EmailBuilder:
         email = Email()
         email.row_data = row_data
         email.row_index = row_index
-        
-        # Process recipients (TO)
-        email_value = str(row_data.get(self.email_column, ""))
+
+        # Process recipients (TO) - case-insensitive column lookup
+        email_key = self._find_key(row_data, self.email_column)
+        email_value = str(row_data.get(email_key, "")) if email_key else ""
         email.to = self._parse_email_list(email_value)
-        
-        # Process CC
-        if self.cc_column and self.cc_column in row_data:
-            cc_value = str(row_data.get(self.cc_column, ""))
+
+        # Process CC - case-insensitive column lookup
+        cc_key = self._find_key(row_data, self.cc_column)
+        if cc_key:
+            cc_value = str(row_data.get(cc_key, ""))
             email.cc = self._parse_email_list(cc_value)
-        
-        # Process BCC
+
+        # Process BCC - case-insensitive column lookup
         bcc_list = []
-        if self.bcc_column and self.bcc_column in row_data:
-            bcc_value = str(row_data.get(self.bcc_column, ""))
+        bcc_key = self._find_key(row_data, self.bcc_column)
+        if bcc_key:
+            bcc_value = str(row_data.get(bcc_key, ""))
             bcc_list = self._parse_email_list(bcc_value)
         
         # Add universal BCC

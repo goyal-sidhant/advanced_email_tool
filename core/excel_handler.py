@@ -30,7 +30,25 @@ class ExcelHandler:
         self.data: List[Dict[str, Any]] = []
         self.filtered_data: List[Dict[str, Any]] = []
         self.row_count: int = 0
-    
+
+    def _find_sheet_name(self, sheet_name: str) -> Optional[str]:
+        """Find actual sheet name using case-insensitive match."""
+        if not self.workbook:
+            return None
+        sheet_lower = sheet_name.lower()
+        for name in self.workbook.sheetnames:
+            if name.lower() == sheet_lower:
+                return name
+        return None
+
+    def _find_column_name(self, column_name: str) -> Optional[str]:
+        """Find actual column name using case-insensitive match."""
+        col_lower = column_name.lower()
+        for col in self.columns:
+            if col.lower() == col_lower:
+                return col
+        return None
+
     def load_file(self, file_path: str, sheet_name: str = None) -> Tuple[bool, str]:
         """
         Load an Excel file.
@@ -60,11 +78,12 @@ class ExcelHandler:
                 data_only=True  # Get values, not formulas
             )
             
-            # Select worksheet
+            # Select worksheet (case-insensitive matching)
             if sheet_name:
-                if sheet_name not in self.workbook.sheetnames:
+                actual_sheet = self._find_sheet_name(sheet_name)
+                if not actual_sheet:
                     return False, f"Sheet '{sheet_name}' not found"
-                self.worksheet = self.workbook[sheet_name]
+                self.worksheet = self.workbook[actual_sheet]
             else:
                 self.worksheet = self.workbook.active
             
@@ -172,12 +191,13 @@ class ExcelHandler:
             )
             
             if sheet_name:
-                if sheet_name not in self.workbook.sheetnames:
+                actual_sheet = self._find_sheet_name(sheet_name)
+                if not actual_sheet:
                     return False, f"Sheet '{sheet_name}' not found"
-                self.worksheet = self.workbook[sheet_name]
+                self.worksheet = self.workbook[actual_sheet]
             else:
                 self.worksheet = self.workbook.active
-            
+
             self._read_data(start_row, start_col)
             
             self.file_path = file_path
@@ -279,21 +299,22 @@ class ExcelHandler:
         Returns:
             Number of rows after filtering
         """
-        if column_name not in self.columns:
+        actual_col = self._find_column_name(column_name)
+        if not actual_col:
             self.logger.warning(f"Filter column '{column_name}' not found")
             return len(self.filtered_data)
-        
+
         value_str = str(value).lower() if value else ""
-        
+
         if exact_match:
             self.filtered_data = [
                 row for row in self.data
-                if str(row.get(column_name, "")).lower() == value_str
+                if str(row.get(actual_col, "")).lower() == value_str
             ]
         else:
             self.filtered_data = [
                 row for row in self.data
-                if value_str in str(row.get(column_name, "")).lower()
+                if value_str in str(row.get(actual_col, "")).lower()
             ]
         
         self.logger.debug(f"Filtered by {column_name}='{value}': {len(self.filtered_data)} rows")
@@ -317,12 +338,13 @@ class ExcelHandler:
             column_name: Column to sort by
             ascending: Sort direction
         """
-        if column_name not in self.columns:
+        actual_col = self._find_column_name(column_name)
+        if not actual_col:
             self.logger.warning(f"Sort column '{column_name}' not found")
             return
-        
+
         def sort_key(row):
-            val = row.get(column_name, "")
+            val = row.get(actual_col, "")
             if val is None:
                 return ""
             return str(val).lower()

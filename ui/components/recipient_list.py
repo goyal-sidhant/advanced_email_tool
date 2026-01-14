@@ -42,7 +42,17 @@ class RecipientListWidget(QWidget):
         self._filtered_indices: List[int] = []
         
         self._setup_ui()
-    
+
+    def _find_column(self, column_name: str) -> Optional[str]:
+        """Find actual column name using case-insensitive match."""
+        if not column_name:
+            return None
+        col_lower = column_name.lower()
+        for col in self._columns:
+            if col.lower() == col_lower:
+                return col
+        return None
+
     def _setup_ui(self) -> None:
         """Set up the user interface."""
         layout = QVBoxLayout(self)
@@ -175,20 +185,21 @@ class RecipientListWidget(QWidget):
     def _get_visible_columns(self) -> List[str]:
         """Get columns to display (prioritize important ones)."""
         visible = []
-        
-        # Prioritize email and identifier columns
-        if self._email_column and self._email_column in self._columns:
-            visible.append(self._email_column)
-        
-        if self._identifier_column and self._identifier_column in self._columns:
-            if self._identifier_column not in visible:
-                visible.append(self._identifier_column)
-        
+
+        # Prioritize email and identifier columns (case-insensitive)
+        actual_email = self._find_column(self._email_column)
+        if actual_email:
+            visible.append(actual_email)
+
+        actual_identifier = self._find_column(self._identifier_column)
+        if actual_identifier and actual_identifier not in visible:
+            visible.append(actual_identifier)
+
         # Add remaining columns (up to 5 total)
         for col in self._columns:
             if col not in visible and len(visible) < 5:
                 visible.append(col)
-        
+
         return visible
     
     def _on_checkbox_changed(self, data_idx: int, state: int) -> None:

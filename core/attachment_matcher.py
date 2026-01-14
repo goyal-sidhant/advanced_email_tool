@@ -2,7 +2,7 @@
 Advanced Email Tool - Attachment Matcher
 ========================================
 Matches files to clients based on identifier patterns.
-Uses exact substring matching in filenames (case-sensitive).
+Uses exact substring matching in filenames (case-insensitive).
 """
 
 import os
@@ -107,7 +107,7 @@ class AttachmentMatcher:
         """
         Find all files matching an identifier.
         
-        Uses exact substring matching (case-sensitive) on filenames.
+        Uses exact substring matching (case-insensitive) on filenames.
         
         Args:
             identifier: Identifier string to match
@@ -126,9 +126,10 @@ class AttachmentMatcher:
         
         # Find matches
         matched = []
+        identifier_lower = identifier.lower()
         for full_path, filename, size in self.file_index:
-            # Exact substring match in filename (case-sensitive)
-            if identifier in filename:
+            # Case-insensitive substring match in filename
+            if identifier_lower in filename.lower():
                 matched.append((full_path, filename, size))
         
         # Cache result
@@ -214,11 +215,13 @@ class AttachmentMatcher:
         if not valid_identifiers:
             return []
         
-        # Find files containing ALL identifiers
+        # Find files containing ALL identifiers (case-insensitive)
         matched = []
+        valid_identifiers_lower = [id.lower() for id in valid_identifiers]
         for full_path, filename, size in self.file_index:
+            filename_lower = filename.lower()
             # Check if ALL identifiers are present in filename
-            all_present = all(identifier in filename for identifier in valid_identifiers)
+            all_present = all(identifier in filename_lower for identifier in valid_identifiers_lower)
             if all_present:
                 matched.append((full_path, filename, size))
         

@@ -51,7 +51,17 @@ class TabExcel(QWidget):
         self._data: List[Dict[str, Any]] = []
         
         self._setup_ui()
-    
+
+    def _find_column(self, column_name: str) -> Optional[str]:
+        """Find actual column name using case-insensitive match."""
+        if not column_name:
+            return None
+        col_lower = column_name.lower()
+        for col in self._columns:
+            if col.lower() == col_lower:
+                return col
+        return None
+
     def _setup_ui(self) -> None:
         """Set up the user interface."""
         layout = QVBoxLayout(self)
@@ -454,9 +464,10 @@ class TabExcel(QWidget):
         preview_data = self._data[:max_rows]
         self.preview_table.setRowCount(len(preview_data))
         
-        # Get email column for validation
+        # Get email column for validation (case-insensitive)
         email_column = self.to_combo.currentText() if hasattr(self, 'to_combo') else None
-        email_col_idx = self._columns.index(email_column) if email_column and email_column in self._columns else -1
+        actual_email_col = self._find_column(email_column)
+        email_col_idx = self._columns.index(actual_email_col) if actual_email_col else -1
         
         # Get theme-aware colors for validation
         try:
@@ -592,8 +603,9 @@ class TabExcel(QWidget):
             mapping: Dictionary with column mappings
         """
         def set_combo(combo: QComboBox, value: Optional[str], has_none: bool = False):
-            if value and value in self._columns:
-                idx = combo.findText(value)
+            actual_col = self._find_column(value) if value else None
+            if actual_col:
+                idx = combo.findText(actual_col)
                 if idx >= 0:
                     combo.setCurrentIndex(idx)
             elif has_none:
