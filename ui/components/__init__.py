@@ -21,6 +21,7 @@ from .file_list import FileListWidget
 from .recipient_list import RecipientListWidget
 
 from .rich_text_editor import RichTextEditor
+from .toggle_switch import ToggleSwitch, LabeledToggleSwitch
 
 __all__ = [
     # Dialogs
@@ -38,4 +39,6 @@ __all__ = [
     'FileListWidget',
     'RecipientListWidget',
     'RichTextEditor',
+    'ToggleSwitch',
+    'LabeledToggleSwitch',
 ]

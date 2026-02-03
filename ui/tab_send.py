@@ -7,7 +7,7 @@ Tab for executing the email send operation with progress tracking.
 from typing import Optional, List, Dict, Any
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox,
-    QPushButton, QLabel, QComboBox, QCheckBox,
+    QPushButton, QLabel, QComboBox,
     QMessageBox, QSpinBox
 )
 from PyQt5.QtCore import Qt, pyqtSignal, QThread, pyqtSlot
@@ -15,6 +15,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QThread, pyqtSlot
 from ui.components.progress_log import ProgressLog
 from ui.components.dialogs import show_error, show_info, show_warning, show_question
 from ui.components.tab_navigation import TabNavigationBar
+from ui.components.toggle_switch import ToggleSwitch
 from core.outlook_sender import OutlookSender
 from core.email_builder import EmailBuilder, Email
 from data.checkpoint import CheckpointManager
@@ -157,14 +158,19 @@ class TabSend(QWidget):
         options_layout.addWidget(self.interval_spin)
         
         options_layout.addSpacing(20)
-        
-        self.preview_check = QCheckBox("Preview mode (display in Outlook, don't send)")
-        self.preview_check.setToolTip(
+
+        preview_label = QLabel("Preview mode")
+        options_layout.addWidget(preview_label)
+        self.preview_toggle = ToggleSwitch()
+        self.preview_toggle.setToolTip(
             "Opens each email in Outlook for review.\n"
             "You can then send manually or close.\n"
             "Useful for testing before bulk send."
         )
-        options_layout.addWidget(self.preview_check)
+        options_layout.addWidget(self.preview_toggle)
+        preview_hint = QLabel("(display only)")
+        preview_hint.setStyleSheet("color: gray; font-size: 10px;")
+        options_layout.addWidget(preview_hint)
         
         options_layout.addStretch()
         
@@ -449,7 +455,7 @@ class TabSend(QWidget):
             return
         
         # Confirm
-        preview_mode = self.preview_check.isChecked()
+        preview_mode = self.preview_toggle.isChecked()
         action = "display" if preview_mode else "send"
         
         reply = QMessageBox.question(
@@ -479,7 +485,7 @@ class TabSend(QWidget):
         self.cancel_btn.setEnabled(True)
         self.account_combo.setEnabled(False)
         self.interval_spin.setEnabled(False)
-        self.preview_check.setEnabled(False)
+        self.preview_toggle.setEnabled(False)
         
         self.progress_log.clear()
         self.progress_log.start_operation(
@@ -557,7 +563,7 @@ class TabSend(QWidget):
         self.cancel_btn.setEnabled(False)
         self.account_combo.setEnabled(True)
         self.interval_spin.setEnabled(True)
-        self.preview_check.setEnabled(True)
+        self.preview_toggle.setEnabled(True)
         self.resume_btn.setVisible(False)
         
         sent = results.get('sent', 0)
@@ -592,7 +598,7 @@ class TabSend(QWidget):
         self.cancel_btn.setEnabled(False)
         self.account_combo.setEnabled(True)
         self.interval_spin.setEnabled(True)
-        self.preview_check.setEnabled(True)
+        self.preview_toggle.setEnabled(True)
         
         self.progress_log.log_error(f"Error: {error}")
         self.status_label.setText("Error occurred")

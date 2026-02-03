@@ -7,7 +7,7 @@ Tab for configuring static and variable (identifier-matched) attachments.
 from typing import Optional, List, Dict, Any
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox,
-    QPushButton, QLabel, QLineEdit, QCheckBox,
+    QPushButton, QLabel, QLineEdit,
     QSplitter, QProgressBar, QMessageBox
 )
 from PyQt5.QtCore import Qt, pyqtSignal, QThread, pyqtSlot
@@ -15,6 +15,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QThread, pyqtSlot
 from ui.components.file_list import FileListWidget, MatchedFileListWidget
 from ui.components.dialogs import show_error, show_info, show_folder_dialog, show_save_dialog
 from ui.components.tab_navigation import TabNavigationBar
+from ui.components.toggle_switch import ToggleSwitch
 from core.attachment_matcher import AttachmentMatcher
 from utils import get_logger, format_bytes
 
@@ -74,19 +75,23 @@ class TabAttachments(QWidget):
         # Attachment toggles row at top
         toggles_layout = QHBoxLayout()
 
-        self.enable_static_check = QCheckBox("Enable Static Attachments")
-        self.enable_static_check.setChecked(True)
-        self.enable_static_check.setToolTip("Include static attachments in emails")
-        self.enable_static_check.stateChanged.connect(self._on_toggle_changed)
-        toggles_layout.addWidget(self.enable_static_check)
+        static_label = QLabel("Static Attachments")
+        toggles_layout.addWidget(static_label)
+        self.enable_static_toggle = ToggleSwitch()
+        self.enable_static_toggle.setChecked(True)
+        self.enable_static_toggle.setToolTip("Include static attachments in emails")
+        self.enable_static_toggle.toggled.connect(self._on_toggle_changed)
+        toggles_layout.addWidget(self.enable_static_toggle)
 
-        toggles_layout.addSpacing(30)
+        toggles_layout.addSpacing(40)
 
-        self.enable_dynamic_check = QCheckBox("Enable Dynamic Attachments")
-        self.enable_dynamic_check.setChecked(True)
-        self.enable_dynamic_check.setToolTip("Include identifier-matched attachments in emails")
-        self.enable_dynamic_check.stateChanged.connect(self._on_toggle_changed)
-        toggles_layout.addWidget(self.enable_dynamic_check)
+        dynamic_label = QLabel("Dynamic Attachments")
+        toggles_layout.addWidget(dynamic_label)
+        self.enable_dynamic_toggle = ToggleSwitch()
+        self.enable_dynamic_toggle.setChecked(True)
+        self.enable_dynamic_toggle.setToolTip("Include identifier-matched attachments in emails")
+        self.enable_dynamic_toggle.toggled.connect(self._on_toggle_changed)
+        toggles_layout.addWidget(self.enable_dynamic_toggle)
 
         toggles_layout.addStretch()
         layout.addLayout(toggles_layout)
@@ -152,11 +157,13 @@ class TabAttachments(QWidget):
         
         # Options row
         options_layout = QHBoxLayout()
-        
-        self.recursive_check = QCheckBox("Include subfolders")
-        self.recursive_check.setToolTip("Also search files in subfolders")
-        self.recursive_check.setChecked(False)
-        options_layout.addWidget(self.recursive_check)
+
+        recursive_label = QLabel("Include subfolders")
+        options_layout.addWidget(recursive_label)
+        self.recursive_toggle = ToggleSwitch()
+        self.recursive_toggle.setToolTip("Also search files in subfolders")
+        self.recursive_toggle.setChecked(False)
+        options_layout.addWidget(self.recursive_toggle)
         
         options_layout.addStretch()
         
@@ -265,7 +272,7 @@ class TabAttachments(QWidget):
 
             success, error = self.attachment_matcher.set_directory(
                 folder,
-                self.recursive_check.isChecked()
+                self.recursive_toggle.isChecked()
             )
 
             if success:
@@ -282,7 +289,7 @@ class TabAttachments(QWidget):
             return
         
         # Update recursive setting
-        self.attachment_matcher.recursive = self.recursive_check.isChecked()
+        self.attachment_matcher.recursive = self.recursive_toggle.isChecked()
         
         # Show progress
         self.progress_bar.setVisible(True)
@@ -415,11 +422,11 @@ class TabAttachments(QWidget):
         self._update_size_warning()
         self.attachments_changed.emit()
 
-    def _on_toggle_changed(self, state: int) -> None:
+    def _on_toggle_changed(self, checked: bool = None) -> None:
         """Handle attachment toggle changes."""
         # Visually indicate disabled sections
-        static_enabled = self.enable_static_check.isChecked()
-        dynamic_enabled = self.enable_dynamic_check.isChecked()
+        static_enabled = self.enable_static_toggle.isChecked()
+        dynamic_enabled = self.enable_dynamic_toggle.isChecked()
 
         # Update static section opacity/enabled state
         self.static_file_list.setEnabled(static_enabled)
@@ -427,7 +434,7 @@ class TabAttachments(QWidget):
         # Update dynamic section controls
         self.folder_input.setEnabled(dynamic_enabled)
         self.browse_btn.setEnabled(dynamic_enabled)
-        self.recursive_check.setEnabled(dynamic_enabled)
+        self.recursive_toggle.setEnabled(dynamic_enabled)
         self.scan_btn.setEnabled(dynamic_enabled and bool(self.attachment_matcher.directory))
         self.test_input.setEnabled(dynamic_enabled)
         self.test_btn.setEnabled(dynamic_enabled)
@@ -437,11 +444,11 @@ class TabAttachments(QWidget):
 
     def is_static_enabled(self) -> bool:
         """Check if static attachments are enabled."""
-        return self.enable_static_check.isChecked()
+        return self.enable_static_toggle.isChecked()
 
     def is_dynamic_enabled(self) -> bool:
         """Check if dynamic attachments are enabled."""
-        return self.enable_dynamic_check.isChecked()
+        return self.enable_dynamic_toggle.isChecked()
 
     def set_toggles(self, static_enabled: bool, dynamic_enabled: bool) -> None:
         """
@@ -451,8 +458,8 @@ class TabAttachments(QWidget):
             static_enabled: Whether static attachments are enabled
             dynamic_enabled: Whether dynamic attachments are enabled
         """
-        self.enable_static_check.setChecked(static_enabled)
-        self.enable_dynamic_check.setChecked(dynamic_enabled)
+        self.enable_static_toggle.setChecked(static_enabled)
+        self.enable_dynamic_toggle.setChecked(dynamic_enabled)
     
     def _update_size_warning(self) -> None:
         """Update attachment size warning."""
@@ -501,7 +508,7 @@ class TabAttachments(QWidget):
     
     def is_recursive(self) -> bool:
         """Check if recursive scanning is enabled."""
-        return self.recursive_check.isChecked()
+        return self.recursive_toggle.isChecked()
     
     def set_folder(self, folder: str, recursive: bool = False) -> bool:
         """
@@ -519,7 +526,7 @@ class TabAttachments(QWidget):
             return False
         
         self.folder_input.setText(folder)
-        self.recursive_check.setChecked(recursive)
+        self.recursive_toggle.setChecked(recursive)
         
         success, _ = self.attachment_matcher.set_directory(folder, recursive)
         if success:

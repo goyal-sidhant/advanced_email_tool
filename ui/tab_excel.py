@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox,
     QPushButton, QLabel, QComboBox, QTableWidget,
     QTableWidgetItem, QHeaderView, QFileDialog,
-    QMessageBox, QSplitter, QFrame, QSpinBox, QRadioButton,
+    QMessageBox, QSplitter, QFrame, QSpinBox,
     QProgressDialog
 )
 from PyQt5.QtCore import Qt, pyqtSignal
@@ -19,6 +19,7 @@ from core.excel_handler import ExcelHandler
 from core.validators import is_valid_email
 from ui.components.dialogs import show_error, show_info, show_file_dialog, show_save_dialog
 from ui.components.tab_navigation import TabNavigationBar
+from ui.components.toggle_switch import LabeledToggleSwitch
 from utils import get_logger
 
 import config
@@ -242,26 +243,17 @@ class TabExcel(QWidget):
         logic_label.setFixedWidth(100)
         logic_label.setToolTip("How to combine Identifier 1 and Identifier 2")
         logic_layout.addWidget(logic_label)
-        
-        self.logic_or_radio = QRadioButton("OR (either)")
-        self.logic_or_radio.setChecked(True)
-        self.logic_or_radio.setToolTip("File matches if it contains Identifier 1 OR Identifier 2")
-        self.logic_or_radio.toggled.connect(self._on_mapping_changed)
-        logic_layout.addWidget(self.logic_or_radio)
-        
-        self.logic_and_radio = QRadioButton("AND (both)")
-        self.logic_and_radio.setToolTip("File matches only if it contains BOTH Identifier 1 AND Identifier 2")
-        logic_layout.addWidget(self.logic_and_radio)
-        
-        logic_layout.addStretch()
-        mapping_layout.addLayout(logic_layout)
-        
-        id_help = QLabel(
+
+        self.logic_toggle = LabeledToggleSwitch("OR (Either)", "AND (Both)")
+        self.logic_toggle.setToolTip(
             "OR = file matches either identifier\n"
             "AND = file must contain both identifiers"
         )
-        id_help.setStyleSheet("color: gray; font-size: 10px;")
-        mapping_layout.addWidget(id_help)
+        self.logic_toggle.toggled.connect(self._on_mapping_changed)
+        logic_layout.addWidget(self.logic_toggle)
+
+        logic_layout.addStretch()
+        mapping_layout.addLayout(logic_layout)
         
         mapping_layout.addStretch()
         
@@ -636,11 +628,8 @@ class TabExcel(QWidget):
         restore_combo(self.identifier_combo, mapping.get('identifier'), has_none=True)
         restore_combo(self.identifier2_combo, mapping.get('identifier2'), has_none=True)
 
-        # Restore logic radio
-        if mapping.get('identifier_logic') == 'AND':
-            self.logic_and_radio.setChecked(True)
-        else:
-            self.logic_or_radio.setChecked(True)
+        # Restore logic toggle (True = AND, False = OR)
+        self.logic_toggle.setCheckedNoSignal(mapping.get('identifier_logic') == 'AND')
 
         # Unblock signals
         for combo in combos:
@@ -668,7 +657,7 @@ class TabExcel(QWidget):
             'bcc': get_value(self.bcc_combo),
             'identifier': get_value(self.identifier_combo),
             'identifier2': get_value(self.identifier2_combo),
-            'identifier_logic': 'OR' if self.logic_or_radio.isChecked() else 'AND',
+            'identifier_logic': 'AND' if self.logic_toggle.isChecked() else 'OR',
         }
     
     def set_column_mapping(self, mapping: Dict[str, Optional[str]]) -> None:
