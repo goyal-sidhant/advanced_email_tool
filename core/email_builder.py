@@ -93,7 +93,11 @@ class EmailBuilder:
         # Attachments
         self.static_attachments: List[str] = []
         self.attachment_matcher = None  # Will be set externally
-        
+
+        # Attachment toggles
+        self.enable_static_attachments: bool = True
+        self.enable_dynamic_attachments: bool = True
+
         # Embedded images (inline in body, same for all recipients)
         self.embedded_images: List[Dict[str, Any]] = []
 
@@ -177,12 +181,23 @@ class EmailBuilder:
     def set_attachment_matcher(self, matcher) -> None:
         """
         Set the attachment matcher for variable attachments.
-        
+
         Args:
             matcher: AttachmentMatcher instance
         """
         self.attachment_matcher = matcher
-    
+
+    def set_attachment_toggles(self, static: bool, dynamic: bool) -> None:
+        """
+        Set whether to include static/dynamic attachments in emails.
+
+        Args:
+            static: Whether to include static attachments
+            dynamic: Whether to include dynamic/variable attachments
+        """
+        self.enable_static_attachments = static
+        self.enable_dynamic_attachments = dynamic
+
     def build_email(
         self, 
         row_data: Dict[str, Any],
@@ -241,12 +256,13 @@ class EmailBuilder:
         
         # Gather attachments
         attachments = []
-        
-        # Add static attachments
-        attachments.extend(self.static_attachments)
-        
-        # Add variable attachments (matched by identifier(s))
-        if self.attachment_matcher and (self.identifier_column or self.identifier_column2):
+
+        # Add static attachments if enabled
+        if self.enable_static_attachments:
+            attachments.extend(self.static_attachments)
+
+        # Add variable attachments (matched by identifier(s)) if enabled
+        if self.enable_dynamic_attachments and self.attachment_matcher and (self.identifier_column or self.identifier_column2):
             # Collect all identifiers for this row
             identifiers = []
             
@@ -387,19 +403,20 @@ class EmailBuilder:
         
         # Get attachment info
         attachment_info = []
-        
-        # Static
-        for path in self.static_attachments:
-            from utils import get_file_size_formatted
-            attachment_info.append({
-                'type': 'static',
-                'path': path,
-                'filename': os.path.basename(path) if path else "",
-                'size': get_file_size_formatted(path),
-            })
-        
-        # Variable
-        if self.attachment_matcher and (self.identifier_column or self.identifier_column2):
+
+        # Static attachments if enabled
+        if self.enable_static_attachments:
+            for path in self.static_attachments:
+                from utils import get_file_size_formatted
+                attachment_info.append({
+                    'type': 'static',
+                    'path': path,
+                    'filename': os.path.basename(path) if path else "",
+                    'size': get_file_size_formatted(path),
+                })
+
+        # Variable attachments if enabled
+        if self.enable_dynamic_attachments and self.attachment_matcher and (self.identifier_column or self.identifier_column2):
             # Collect all identifiers for this row
             identifiers = []
             

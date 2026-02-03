@@ -13,6 +13,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 
 from ui.components.recipient_list import RecipientListWidget
 from ui.components.dialogs import show_error, show_info, show_warning, InputDialog
+from ui.components.tab_navigation import TabNavigationBar
 from data.recipient_lists import RecipientListStorage
 from utils import get_logger
 
@@ -30,7 +31,9 @@ class TabRecipients(QWidget):
     
     # Signals
     selection_changed = pyqtSignal(int)  # Emits selected count
-    
+    navigate_previous = pyqtSignal()
+    navigate_next = pyqtSignal()
+
     def __init__(self, parent=None):
         """Initialize the Recipients tab."""
         super().__init__(parent)
@@ -96,9 +99,15 @@ class TabRecipients(QWidget):
         self.select_none_btn = QPushButton("Clear Selection")
         self.select_none_btn.clicked.connect(self.recipient_list.select_none)
         summary_layout.addWidget(self.select_none_btn)
-        
+
         layout.addLayout(summary_layout)
-    
+
+        # Navigation bar
+        self.nav_bar = TabNavigationBar(show_previous=True, show_next=True)
+        self.nav_bar.previous_clicked.connect(self.navigate_previous.emit)
+        self.nav_bar.next_clicked.connect(self.navigate_next.emit)
+        layout.addWidget(self.nav_bar)
+
     def _refresh_lists(self) -> None:
         """Refresh saved lists dropdown."""
         current = self.lists_combo.currentText()

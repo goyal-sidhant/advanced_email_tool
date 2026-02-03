@@ -251,18 +251,35 @@ class MainWindow(QMainWindow):
         # Excel tab signals
         self.tab_excel.data_loaded.connect(self._on_data_loaded)
         self.tab_excel.mapping_changed.connect(self._on_mapping_changed)
-        
+
         # Compose tab signals
         self.tab_compose.template_changed.connect(self._on_template_changed)
-        
+
         # Attachments tab signals
         self.tab_attachments.attachments_changed.connect(self._on_attachments_changed)
-        
+
         # Recipients tab signals
         self.tab_recipients.selection_changed.connect(self._on_selection_changed)
-        
+
         # Tab change
         self.tab_widget.currentChanged.connect(self._on_tab_changed)
+
+        # Tab navigation signals
+        self.tab_excel.navigate_next.connect(self._next_tab)
+
+        self.tab_compose.navigate_previous.connect(self._prev_tab)
+        self.tab_compose.navigate_next.connect(self._next_tab)
+
+        self.tab_attachments.navigate_previous.connect(self._prev_tab)
+        self.tab_attachments.navigate_next.connect(self._next_tab)
+
+        self.tab_recipients.navigate_previous.connect(self._prev_tab)
+        self.tab_recipients.navigate_next.connect(self._next_tab)
+
+        self.tab_preview.navigate_previous.connect(self._prev_tab)
+        self.tab_preview.navigate_next.connect(self._next_tab)
+
+        self.tab_send.navigate_previous.connect(self._prev_tab)
     
     def _setup_auto_save(self) -> None:
         """Set up auto-save functionality."""
@@ -348,6 +365,11 @@ class MainWindow(QMainWindow):
         self.email_builder.set_attachment_matcher(
             self.tab_attachments.get_attachment_matcher()
         )
+        # Apply attachment toggles
+        self.email_builder.set_attachment_toggles(
+            self.tab_attachments.is_static_enabled(),
+            self.tab_attachments.is_dynamic_enabled()
+        )
     
     def _on_selection_changed(self, count: int) -> None:
         """Handle recipient selection changes."""
@@ -355,12 +377,21 @@ class MainWindow(QMainWindow):
     
     def _on_tab_changed(self, index: int) -> None:
         """Handle tab changes."""
-        tab_name = self.tab_widget.tabText(index)
-        
+        # Status bar hints for each tab
+        hints = {
+            0: "Load Excel file and map columns to email fields",
+            1: "Create email subject and body using {Variables}",
+            2: "Configure static and dynamic attachments",
+            3: "Select which recipients to send emails to",
+            4: "Preview how emails will look before sending",
+            5: "Send emails via Outlook"
+        }
+        self.status_bar.showMessage(hints.get(index, "Ready"))
+
         # Update preview when entering Preview tab
         if index == 4:  # Preview tab
             self._update_preview()
-        
+
         # Update send tab when entering
         elif index == 5:  # Send tab
             self._update_send_tab()
@@ -400,7 +431,7 @@ class MainWindow(QMainWindow):
     def _get_session_state(self) -> Dict[str, Any]:
         """Get current session state for saving."""
         mapping = self.tab_excel.get_column_mapping()
-        
+
         return {
             'excel_file_path': self.tab_excel.get_file_path() or '',
             'column_mapping': mapping,
@@ -410,6 +441,8 @@ class MainWindow(QMainWindow):
             'static_attachments': self.tab_attachments.get_static_attachments(),
             'attachment_folder': self.tab_attachments.get_attachment_folder() or '',
             'attachment_recursive': self.tab_attachments.is_recursive(),
+            'enable_static_attachments': self.tab_attachments.is_static_enabled(),
+            'enable_dynamic_attachments': self.tab_attachments.is_dynamic_enabled(),
             'selected_recipients': self.tab_recipients.get_selected_indices(),
             'selected_account': self.tab_send.get_selected_account() or '',
         }
@@ -435,14 +468,20 @@ class MainWindow(QMainWindow):
         static = state.get('static_attachments', [])
         if static:
             self.tab_attachments.set_static_attachments(static)
-        
+
         folder = state.get('attachment_folder')
         if folder:
             self.tab_attachments.set_folder(
                 folder,
                 state.get('attachment_recursive', False)
             )
-        
+
+        # Restore attachment toggles (default to True for backward compatibility)
+        self.tab_attachments.set_toggles(
+            state.get('enable_static_attachments', True),
+            state.get('enable_dynamic_attachments', True)
+        )
+
         # Restore recipient selection
         selected = state.get('selected_recipients', [])
         if selected:
@@ -586,6 +625,8 @@ class MainWindow(QMainWindow):
                 'static_attachments': self.tab_attachments.get_static_attachments(),
                 'attachment_folder': self.tab_attachments.get_attachment_folder() or '',
                 'attachment_recursive': self.tab_attachments.is_recursive(),
+                'enable_static': self.tab_attachments.is_static_enabled(),
+                'enable_dynamic': self.tab_attachments.is_dynamic_enabled(),
             },
             'send': {
                 'selected_account': self.tab_send.get_selected_account() or '',
@@ -747,6 +788,12 @@ class MainWindow(QMainWindow):
                 "Attachment Folder Not Found",
                 f"The attachment folder was not found:\n{folder}"
             )
+
+        # Restore attachment toggles (default to True for backward compatibility)
+        self.tab_attachments.set_toggles(
+            attach_config.get('enable_static', True),
+            attach_config.get('enable_dynamic', True)
+        )
 
     def _show_profile_info(self) -> None:
         """Show information about what a profile contains."""

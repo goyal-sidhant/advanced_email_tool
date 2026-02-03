@@ -18,6 +18,7 @@ from PyQt5.QtGui import QColor, QBrush
 from core.excel_handler import ExcelHandler
 from core.validators import is_valid_email
 from ui.components.dialogs import show_error, show_info, show_file_dialog, show_save_dialog
+from ui.components.tab_navigation import TabNavigationBar
 from utils import get_logger
 
 import config
@@ -39,6 +40,8 @@ class TabExcel(QWidget):
     # Signals
     data_loaded = pyqtSignal(list, list)  # Emits (columns, data)
     mapping_changed = pyqtSignal(dict)  # Emits column mapping
+    navigate_previous = pyqtSignal()  # Navigation signal
+    navigate_next = pyqtSignal()  # Navigation signal
     
     def __init__(self, parent=None):
         """Initialize the Excel tab."""
@@ -81,7 +84,8 @@ class TabExcel(QWidget):
         self.browse_btn.clicked.connect(self._browse_file)
         path_layout.addWidget(self.browse_btn)
         
-        self.reload_btn = QPushButton("Reload")
+        self.reload_btn = QPushButton("Refresh")
+        self.reload_btn.setToolTip("Reload file to pick up external changes")
         self.reload_btn.clicked.connect(self._reload_file)
         self.reload_btn.setEnabled(False)
         path_layout.addWidget(self.reload_btn)
@@ -295,9 +299,14 @@ class TabExcel(QWidget):
         
         # Set splitter proportions
         splitter.setSizes([300, 500])
-        
+
         layout.addWidget(splitter, stretch=1)
-    
+
+        # Navigation bar (first tab - no Previous button)
+        self.nav_bar = TabNavigationBar(show_previous=False, show_next=True)
+        self.nav_bar.next_clicked.connect(self.navigate_next.emit)
+        layout.addWidget(self.nav_bar)
+
     def _browse_file(self) -> None:
         """Open file dialog to select Excel file."""
         file_path = show_file_dialog(
@@ -569,9 +578,76 @@ class TabExcel(QWidget):
             )
     
     def _reload_file(self) -> None:
-        """Reload the current file."""
-        if self._file_path:
-            self._load_file(self._file_path)
+        """Reload the current file to pick up external changes."""
+        if not self._file_path:
+            return
+
+        # Store current state
+        current_sheet = self.sheet_combo.currentText()
+        current_mapping = self.get_column_mapping()
+        current_row_offset = self.start_row_spin.value()
+        current_col_offset = self.start_col_spin.value()
+
+        # Reload file with current offsets
+        if current_row_offset > 1 or current_col_offset > 1:
+            success, error = self.excel_handler.load_file_with_offset(
+                self._file_path,
+                current_sheet,
+                start_row=current_row_offset,
+                start_col=current_col_offset
+            )
+        else:
+            success, error = self.excel_handler.load_file(self._file_path, current_sheet)
+
+        if success:
+            self._load_sheet_data()
+            # Restore column mapping if columns still exist
+            self._restore_column_mapping(current_mapping)
+            show_info(self, "Refreshed", "File reloaded with latest changes.")
+        else:
+            show_error(self, "Refresh Error", error)
+
+    def _restore_column_mapping(self, mapping: Dict[str, Optional[str]]) -> None:
+        """
+        Restore column mapping after reload if columns still exist.
+
+        Args:
+            mapping: Previous column mapping to restore
+        """
+        def restore_combo(combo: QComboBox, value: Optional[str], has_none: bool = False):
+            if not value:
+                if has_none:
+                    combo.setCurrentIndex(0)
+                return
+            actual_col = self._find_column(value)
+            if actual_col:
+                idx = combo.findText(actual_col)
+                if idx >= 0:
+                    combo.setCurrentIndex(idx)
+
+        # Block signals during restoration
+        combos = [self.to_combo, self.cc_combo, self.bcc_combo, self.identifier_combo, self.identifier2_combo]
+        for combo in combos:
+            combo.blockSignals(True)
+
+        restore_combo(self.to_combo, mapping.get('to'))
+        restore_combo(self.cc_combo, mapping.get('cc'), has_none=True)
+        restore_combo(self.bcc_combo, mapping.get('bcc'), has_none=True)
+        restore_combo(self.identifier_combo, mapping.get('identifier'), has_none=True)
+        restore_combo(self.identifier2_combo, mapping.get('identifier2'), has_none=True)
+
+        # Restore logic radio
+        if mapping.get('identifier_logic') == 'AND':
+            self.logic_and_radio.setChecked(True)
+        else:
+            self.logic_or_radio.setChecked(True)
+
+        # Unblock signals
+        for combo in combos:
+            combo.blockSignals(False)
+
+        # Trigger mapping changed
+        self._on_mapping_changed()
     
     def get_column_mapping(self) -> Dict[str, Optional[str]]:
         """

@@ -14,6 +14,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QThread, pyqtSlot
 
 from ui.components.file_list import FileListWidget, MatchedFileListWidget
 from ui.components.dialogs import show_error, show_info, show_folder_dialog, show_save_dialog
+from ui.components.tab_navigation import TabNavigationBar
 from core.attachment_matcher import AttachmentMatcher
 from utils import get_logger, format_bytes
 
@@ -52,7 +53,9 @@ class TabAttachments(QWidget):
     
     # Signals
     attachments_changed = pyqtSignal()
-    
+    navigate_previous = pyqtSignal()
+    navigate_next = pyqtSignal()
+
     def __init__(self, parent=None):
         """Initialize the Attachments tab."""
         super().__init__(parent)
@@ -67,7 +70,27 @@ class TabAttachments(QWidget):
     def _setup_ui(self) -> None:
         """Set up the user interface."""
         layout = QVBoxLayout(self)
-        
+
+        # Attachment toggles row at top
+        toggles_layout = QHBoxLayout()
+
+        self.enable_static_check = QCheckBox("Enable Static Attachments")
+        self.enable_static_check.setChecked(True)
+        self.enable_static_check.setToolTip("Include static attachments in emails")
+        self.enable_static_check.stateChanged.connect(self._on_toggle_changed)
+        toggles_layout.addWidget(self.enable_static_check)
+
+        toggles_layout.addSpacing(30)
+
+        self.enable_dynamic_check = QCheckBox("Enable Dynamic Attachments")
+        self.enable_dynamic_check.setChecked(True)
+        self.enable_dynamic_check.setToolTip("Include identifier-matched attachments in emails")
+        self.enable_dynamic_check.stateChanged.connect(self._on_toggle_changed)
+        toggles_layout.addWidget(self.enable_dynamic_check)
+
+        toggles_layout.addStretch()
+        layout.addLayout(toggles_layout)
+
         # Splitter for static and variable sections
         splitter = QSplitter(Qt.Horizontal)
         
@@ -137,8 +160,8 @@ class TabAttachments(QWidget):
         
         options_layout.addStretch()
         
-        self.scan_btn = QPushButton("Scan Folder")
-        self.scan_btn.setToolTip("Index all files in folder for matching")
+        self.scan_btn = QPushButton("Rescan")
+        self.scan_btn.setToolTip("Rescan folder to pick up new or changed files")
         self.scan_btn.clicked.connect(self._scan_folder)
         self.scan_btn.setEnabled(False)
         options_layout.addWidget(self.scan_btn)
@@ -225,23 +248,30 @@ class TabAttachments(QWidget):
         self.size_warning_label = QLabel("")
         self.size_warning_label.setStyleSheet("color: #fd7e14;")
         layout.addWidget(self.size_warning_label)
-    
+
+        # Navigation bar
+        self.nav_bar = TabNavigationBar(show_previous=True, show_next=True)
+        self.nav_bar.previous_clicked.connect(self.navigate_previous.emit)
+        self.nav_bar.next_clicked.connect(self.navigate_next.emit)
+        layout.addWidget(self.nav_bar)
+
     def _browse_folder(self) -> None:
-        """Open folder selection dialog."""
+        """Open folder selection dialog and auto-scan."""
         folder = show_folder_dialog(self, "Select Attachments Folder")
-        
+
         if folder:
             self.folder_input.setText(folder)
             self.folder_input.setToolTip(folder)
-            
+
             success, error = self.attachment_matcher.set_directory(
                 folder,
                 self.recursive_check.isChecked()
             )
-            
+
             if success:
                 self.scan_btn.setEnabled(True)
-                self.scan_status_label.setText("Folder selected. Click 'Scan Folder' to index files.")
+                # Auto-scan immediately after folder selection
+                self._scan_folder()
             else:
                 show_error(self, "Error", error)
                 self.scan_btn.setEnabled(False)
@@ -271,13 +301,14 @@ class TabAttachments(QWidget):
         """Handle scan completion."""
         self.progress_bar.setVisible(False)
         self.scan_btn.setEnabled(True)
-        self.scan_status_label.setText(message)
+        # Add hint about Rescan button
+        self.scan_status_label.setText(f"{message}. Use 'Rescan' to refresh.")
         self.report_btn.setEnabled(count > 0)
-        
+
         # Update match statistics if identifiers available
         if self._identifiers:
             self._update_match_statistics()
-        
+
         self._on_attachments_changed()
     
     @pyqtSlot(str)
@@ -383,6 +414,45 @@ class TabAttachments(QWidget):
         """Handle attachment configuration changes."""
         self._update_size_warning()
         self.attachments_changed.emit()
+
+    def _on_toggle_changed(self, state: int) -> None:
+        """Handle attachment toggle changes."""
+        # Visually indicate disabled sections
+        static_enabled = self.enable_static_check.isChecked()
+        dynamic_enabled = self.enable_dynamic_check.isChecked()
+
+        # Update static section opacity/enabled state
+        self.static_file_list.setEnabled(static_enabled)
+
+        # Update dynamic section controls
+        self.folder_input.setEnabled(dynamic_enabled)
+        self.browse_btn.setEnabled(dynamic_enabled)
+        self.recursive_check.setEnabled(dynamic_enabled)
+        self.scan_btn.setEnabled(dynamic_enabled and bool(self.attachment_matcher.directory))
+        self.test_input.setEnabled(dynamic_enabled)
+        self.test_btn.setEnabled(dynamic_enabled)
+        self.report_btn.setEnabled(dynamic_enabled and self.attachment_matcher.total_files > 0)
+
+        self._on_attachments_changed()
+
+    def is_static_enabled(self) -> bool:
+        """Check if static attachments are enabled."""
+        return self.enable_static_check.isChecked()
+
+    def is_dynamic_enabled(self) -> bool:
+        """Check if dynamic attachments are enabled."""
+        return self.enable_dynamic_check.isChecked()
+
+    def set_toggles(self, static_enabled: bool, dynamic_enabled: bool) -> None:
+        """
+        Set toggle states (for session restore).
+
+        Args:
+            static_enabled: Whether static attachments are enabled
+            dynamic_enabled: Whether dynamic attachments are enabled
+        """
+        self.enable_static_check.setChecked(static_enabled)
+        self.enable_dynamic_check.setChecked(dynamic_enabled)
     
     def _update_size_warning(self) -> None:
         """Update attachment size warning."""

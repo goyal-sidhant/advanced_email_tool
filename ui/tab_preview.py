@@ -15,6 +15,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 
 from ui.components.file_list import MatchedFileListWidget
 from ui.components.variable_completer import LineEditCompleter
+from ui.components.tab_navigation import TabNavigationBar
 from core.template_engine import TemplateEngine
 from core.email_builder import EmailBuilder
 from utils import get_logger, format_bytes
@@ -23,7 +24,7 @@ from utils import get_logger, format_bytes
 class TabPreview(QWidget):
     """
     Email preview tab.
-    
+
     Features:
     - Preview email for each recipient
     - Navigate between recipients
@@ -31,7 +32,11 @@ class TabPreview(QWidget):
     - View attachments per recipient
     - Validate before sending
     """
-    
+
+    # Signals
+    navigate_previous = pyqtSignal()
+    navigate_next = pyqtSignal()
+
     def __init__(self, parent=None):
         """Initialize the Preview tab."""
         super().__init__(parent)
@@ -185,9 +190,15 @@ class TabPreview(QWidget):
         self.refresh_btn = QPushButton("Refresh Preview")
         self.refresh_btn.clicked.connect(self.refresh_preview)
         validation_layout.addWidget(self.refresh_btn)
-        
+
         layout.addLayout(validation_layout)
-    
+
+        # Tab navigation bar (separate from recipient navigation)
+        self.tab_nav_bar = TabNavigationBar(show_previous=True, show_next=True)
+        self.tab_nav_bar.previous_clicked.connect(self.navigate_previous.emit)
+        self.tab_nav_bar.next_clicked.connect(self.navigate_next.emit)
+        layout.addWidget(self.tab_nav_bar)
+
     def set_email_builder(self, builder: EmailBuilder) -> None:
         """
         Set the email builder for preview generation.

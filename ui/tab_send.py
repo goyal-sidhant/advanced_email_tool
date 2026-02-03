@@ -14,6 +14,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QThread, pyqtSlot
 
 from ui.components.progress_log import ProgressLog
 from ui.components.dialogs import show_error, show_info, show_warning, show_question
+from ui.components.tab_navigation import TabNavigationBar
 from core.outlook_sender import OutlookSender
 from core.email_builder import EmailBuilder, Email
 from data.checkpoint import CheckpointManager
@@ -93,6 +94,8 @@ class TabSend(QWidget):
     # Signals
     send_started = pyqtSignal()
     send_completed = pyqtSignal(dict)  # results
+    navigate_previous = pyqtSignal()
+    navigate_next = pyqtSignal()
     
     def __init__(self, parent=None):
         """Initialize the Send tab."""
@@ -274,9 +277,14 @@ class TabSend(QWidget):
         self.resume_btn.clicked.connect(self._resume_sending)
         self.resume_btn.setVisible(False)
         controls_layout.addWidget(self.resume_btn)
-        
+
         layout.addLayout(controls_layout)
-    
+
+        # Navigation bar (last tab - no Next button)
+        self.nav_bar = TabNavigationBar(show_previous=True, show_next=False)
+        self.nav_bar.previous_clicked.connect(self.navigate_previous.emit)
+        layout.addWidget(self.nav_bar)
+
     def _initialize_outlook(self) -> None:
         """Initialize Outlook connection."""
         success, error = self.outlook_sender.initialize()

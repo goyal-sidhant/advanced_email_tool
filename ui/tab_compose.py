@@ -15,6 +15,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 from ui.components.rich_text_editor import RichTextEditor
 from ui.components.dialogs import show_error, show_info, show_warning, InputDialog
 from ui.components.variable_completer import LineEditCompleter
+from ui.components.tab_navigation import TabNavigationBar
 from data.template_storage import TemplateStorage
 from core.template_engine import TemplateEngine
 from utils import get_logger
@@ -34,6 +35,8 @@ class TabCompose(QWidget):
     
     # Signals
     template_changed = pyqtSignal()
+    navigate_previous = pyqtSignal()
+    navigate_next = pyqtSignal()
     
     def __init__(self, parent=None):
         """Initialize the Compose tab."""
@@ -154,7 +157,13 @@ class TabCompose(QWidget):
         self.var_info_label = QLabel("")
         self.var_info_label.setStyleSheet("color: gray; font-size: 10px;")
         layout.addWidget(self.var_info_label)
-    
+
+        # Navigation bar
+        self.nav_bar = TabNavigationBar(show_previous=True, show_next=True)
+        self.nav_bar.previous_clicked.connect(self.navigate_previous.emit)
+        self.nav_bar.next_clicked.connect(self.navigate_next.emit)
+        layout.addWidget(self.nav_bar)
+
     def _refresh_template_list(self) -> None:
         """Refresh the template dropdown list."""
         current = self.template_combo.currentText()

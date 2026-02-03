@@ -52,15 +52,21 @@ class ExcelHandler:
     def load_file(self, file_path: str, sheet_name: str = None) -> Tuple[bool, str]:
         """
         Load an Excel file.
-        
+
         Args:
             file_path: Path to Excel file (.xlsx)
             sheet_name: Name of sheet to load (default: first sheet)
-            
+
         Returns:
             Tuple of (success, error_message)
         """
         try:
+            # Close any previously opened workbook to release file handle
+            if self.workbook:
+                self.workbook.close()
+                self.workbook = None
+                self.worksheet = None
+
             self.logger.info(f"Loading Excel file: {file_path}")
             
             # Validate file exists
@@ -156,25 +162,31 @@ class ExcelHandler:
         self.filtered_data = self.data.copy()
     
     def load_file_with_offset(
-        self, 
-        file_path: str, 
+        self,
+        file_path: str,
         sheet_name: str = None,
         start_row: int = 1,
         start_col: int = 1
     ) -> Tuple[bool, str]:
         """
         Load an Excel file with data starting from specified row/column.
-        
+
         Args:
             file_path: Path to Excel file (.xlsx)
             sheet_name: Name of sheet to load (default: first sheet)
             start_row: Row number where headers are (1-based)
             start_col: Column number where data starts (1-based)
-            
+
         Returns:
             Tuple of (success, error_message)
         """
         try:
+            # Close any previously opened workbook to release file handle
+            if self.workbook:
+                self.workbook.close()
+                self.workbook = None
+                self.worksheet = None
+
             self.logger.info(f"Loading Excel file with offset: {file_path} (row={start_row}, col={start_col})")
             
             path = Path(file_path)
