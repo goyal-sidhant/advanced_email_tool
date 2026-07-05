@@ -9,10 +9,10 @@ from typing import List, Dict, Any, Optional, Set
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,
     QTableWidgetItem, QPushButton, QLabel, QLineEdit,
-    QCheckBox, QComboBox, QHeaderView, QMenu, QAction,
+    QComboBox, QHeaderView, QMenu, QAction,
     QAbstractItemView
 )
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 
 
 class RecipientListWidget(QWidget):
@@ -63,17 +63,24 @@ class RecipientListWidget(QWidget):
         
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Search recipients...")
-        self.search_input.textChanged.connect(self._apply_filter)
+        # Debounced: filtering rebuilds the table, so don't do it per keystroke
+        self._filter_timer = QTimer(self)
+        self._filter_timer.setSingleShot(True)
+        self._filter_timer.setInterval(250)
+        self._filter_timer.timeout.connect(self._apply_filter)
+        self.search_input.textChanged.connect(
+            lambda _text: self._filter_timer.start()
+        )
         search_layout.addWidget(self.search_input)
-        
+
         self.filter_column = QComboBox()
         self.filter_column.addItem("All Columns")
         self.filter_column.currentIndexChanged.connect(self._apply_filter)
         self.filter_column.setFixedWidth(150)
         search_layout.addWidget(self.filter_column)
-        
+
         layout.addLayout(search_layout)
-        
+
         # Table
         self.table = QTableWidget()
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -81,6 +88,7 @@ class RecipientListWidget(QWidget):
         self.table.horizontalHeader().setStretchLastSection(True)
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self._show_context_menu)
+        self.table.itemChanged.connect(self._on_item_changed)
         layout.addWidget(self.table)
         
         # Selection controls
@@ -139,48 +147,55 @@ class RecipientListWidget(QWidget):
     
     def _rebuild_table(self) -> None:
         """Rebuild the table with current data and filters."""
-        self.table.clear()
-        self.table.setRowCount(0)
-        
-        if not self._data:
-            return
-        
-        # Determine visible columns (prioritize email and identifier)
-        visible_columns = self._get_visible_columns()
-        
-        # Set up columns (+1 for checkbox)
-        self.table.setColumnCount(len(visible_columns) + 1)
-        
-        headers = [""] + visible_columns
-        self.table.setHorizontalHeaderLabels(headers)
-        
-        # Set checkbox column width
-        self.table.setColumnWidth(0, 30)
-        
-        # Add rows
-        self.table.setRowCount(len(self._filtered_indices))
-        
-        for row_idx, data_idx in enumerate(self._filtered_indices):
-            row_data = self._data[data_idx]
-            
-            # Checkbox
-            checkbox = QCheckBox()
-            checkbox.setChecked(data_idx in self._selected_indices)
-            checkbox.stateChanged.connect(
-                lambda state, idx=data_idx: self._on_checkbox_changed(idx, state)
-            )
-            self.table.setCellWidget(row_idx, 0, checkbox)
-            
-            # Data columns
-            for col_idx, col_name in enumerate(visible_columns):
-                value = str(row_data.get(col_name, ""))
-                item = QTableWidgetItem(value)
-                item.setData(Qt.UserRole, data_idx)  # Store original index
-                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-                self.table.setItem(row_idx, col_idx + 1, item)
-        
-        # Resize columns to content
-        self.table.resizeColumnsToContents()
+        # Checkable items (not per-row QCheckBox cell widgets — those make
+        # rebuilds an order of magnitude slower on large lists)
+        self.table.blockSignals(True)
+        try:
+            self.table.clear()
+            self.table.setRowCount(0)
+
+            if not self._data:
+                return
+
+            # Determine visible columns (prioritize email and identifier)
+            visible_columns = self._get_visible_columns()
+
+            # Set up columns (+1 for checkbox)
+            self.table.setColumnCount(len(visible_columns) + 1)
+
+            headers = [""] + visible_columns
+            self.table.setHorizontalHeaderLabels(headers)
+
+            # Set checkbox column width
+            self.table.setColumnWidth(0, 30)
+
+            # Add rows
+            self.table.setRowCount(len(self._filtered_indices))
+
+            for row_idx, data_idx in enumerate(self._filtered_indices):
+                row_data = self._data[data_idx]
+
+                # Checkbox item
+                check_item = QTableWidgetItem()
+                check_item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+                check_item.setCheckState(
+                    Qt.Checked if data_idx in self._selected_indices else Qt.Unchecked
+                )
+                check_item.setData(Qt.UserRole, data_idx)
+                self.table.setItem(row_idx, 0, check_item)
+
+                # Data columns
+                for col_idx, col_name in enumerate(visible_columns):
+                    value = str(row_data.get(col_name, ""))
+                    item = QTableWidgetItem(value)
+                    item.setData(Qt.UserRole, data_idx)  # Store original index
+                    item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                    self.table.setItem(row_idx, col_idx + 1, item)
+
+            # Resize columns to content
+            self.table.resizeColumnsToContents()
+        finally:
+            self.table.blockSignals(False)
     
     def _get_visible_columns(self) -> List[str]:
         """Get columns to display (prioritize important ones)."""
@@ -202,26 +217,58 @@ class RecipientListWidget(QWidget):
 
         return visible
     
-    def _on_checkbox_changed(self, data_idx: int, state: int) -> None:
-        """Handle checkbox state change."""
-        if state == Qt.Checked:
+    def _on_item_changed(self, item: QTableWidgetItem) -> None:
+        """Handle a checkbox item being toggled."""
+        if item.column() != 0:
+            return
+
+        data_idx = item.data(Qt.UserRole)
+        if data_idx is None:
+            return
+
+        if item.checkState() == Qt.Checked:
             self._selected_indices.add(data_idx)
         else:
             self._selected_indices.discard(data_idx)
-        
+
         self._update_selection_label()
         self.selection_changed.emit(len(self._selected_indices))
-    
+
+    def _filter_active(self) -> bool:
+        """True when a search filter is hiding rows."""
+        return len(self._filtered_indices) != len(self._data)
+
+    def _refresh_check_states(self) -> None:
+        """Update all check marks in place (no table rebuild)."""
+        self.table.blockSignals(True)
+        try:
+            for row in range(self.table.rowCount()):
+                item = self.table.item(row, 0)
+                if item is None:
+                    continue
+                data_idx = item.data(Qt.UserRole)
+                item.setCheckState(
+                    Qt.Checked if data_idx in self._selected_indices else Qt.Unchecked
+                )
+        finally:
+            self.table.blockSignals(False)
+
+    def _selection_updated(self) -> None:
+        """Refresh UI after a bulk selection change."""
+        self._refresh_check_states()
+        self._update_selection_label()
+        self.selection_changed.emit(len(self._selected_indices))
+
     def _apply_filter(self) -> None:
         """Apply search filter to the table."""
         search_text = self.search_input.text().lower().strip()
         filter_col = self.filter_column.currentText()
-        
+
         if not search_text:
             self._filtered_indices = list(range(len(self._data)))
         else:
             self._filtered_indices = []
-            
+
             for idx, row in enumerate(self._data):
                 if filter_col == "All Columns":
                     # Search all columns
@@ -232,12 +279,25 @@ class RecipientListWidget(QWidget):
                 else:
                     # Search specific column
                     match = search_text in str(row.get(filter_col, "")).lower()
-                
+
                 if match:
                     self._filtered_indices.append(idx)
-        
+
         self._rebuild_table()
         self._update_selection_label()
+        self._update_button_labels()
+
+    def _update_button_labels(self) -> None:
+        """Make it obvious that selection buttons act on the visible rows."""
+        if self._filter_active():
+            shown = len(self._filtered_indices)
+            self.select_all_btn.setText(f"Select All ({shown} shown)")
+            self.select_none_btn.setText(f"Select None ({shown} shown)")
+            self.invert_btn.setText(f"Invert ({shown} shown)")
+        else:
+            self.select_all_btn.setText("Select All")
+            self.select_none_btn.setText("Select None")
+            self.invert_btn.setText("Invert")
     
     def _update_selection_label(self) -> None:
         """Update the selection count label."""
@@ -274,21 +334,13 @@ class RecipientListWidget(QWidget):
     
     def _select_visible(self) -> None:
         """Select all visible (filtered) rows."""
-        for idx in self._filtered_indices:
-            self._selected_indices.add(idx)
-        
-        self._rebuild_table()
-        self._update_selection_label()
-        self.selection_changed.emit(len(self._selected_indices))
-    
+        self._selected_indices.update(self._filtered_indices)
+        self._selection_updated()
+
     def _deselect_visible(self) -> None:
         """Deselect all visible (filtered) rows."""
-        for idx in self._filtered_indices:
-            self._selected_indices.discard(idx)
-        
-        self._rebuild_table()
-        self._update_selection_label()
-        self.selection_changed.emit(len(self._selected_indices))
+        self._selected_indices.difference_update(self._filtered_indices)
+        self._selection_updated()
     
     def _copy_selected_emails(self) -> None:
         """Copy selected email addresses to clipboard."""
@@ -307,26 +359,31 @@ class RecipientListWidget(QWidget):
             clipboard.setText("; ".join(emails))
     
     def select_all(self) -> None:
-        """Select all recipients."""
-        self._selected_indices = set(range(len(self._data)))
-        self._rebuild_table()
-        self._update_selection_label()
-        self.selection_changed.emit(len(self._selected_indices))
-    
+        """Select all recipients (only the visible ones while filtering)."""
+        if self._filter_active():
+            self._selected_indices.update(self._filtered_indices)
+        else:
+            self._selected_indices = set(range(len(self._data)))
+        self._selection_updated()
+
     def select_none(self) -> None:
-        """Deselect all recipients."""
-        self._selected_indices.clear()
-        self._rebuild_table()
-        self._update_selection_label()
-        self.selection_changed.emit(0)
-    
+        """Deselect recipients (only the visible ones while filtering)."""
+        if self._filter_active():
+            self._selected_indices.difference_update(self._filtered_indices)
+        else:
+            self._selected_indices.clear()
+        self._selection_updated()
+
     def invert_selection(self) -> None:
-        """Invert the current selection."""
-        all_indices = set(range(len(self._data)))
-        self._selected_indices = all_indices - self._selected_indices
-        self._rebuild_table()
-        self._update_selection_label()
-        self.selection_changed.emit(len(self._selected_indices))
+        """Invert the selection (only the visible rows while filtering)."""
+        if self._filter_active():
+            self._selected_indices.symmetric_difference_update(
+                self._filtered_indices
+            )
+        else:
+            all_indices = set(range(len(self._data)))
+            self._selected_indices = all_indices - self._selected_indices
+        self._selection_updated()
     
     def get_selected_indices(self) -> List[int]:
         """
@@ -340,14 +397,12 @@ class RecipientListWidget(QWidget):
     def set_selected_indices(self, indices: List[int]) -> None:
         """
         Set the selected indices.
-        
+
         Args:
             indices: List of indices to select
         """
         self._selected_indices = set(indices)
-        self._rebuild_table()
-        self._update_selection_label()
-        self.selection_changed.emit(len(self._selected_indices))
+        self._selection_updated()
     
     def get_selected_data(self) -> List[Dict[str, Any]]:
         """
