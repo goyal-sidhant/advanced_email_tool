@@ -13,6 +13,22 @@ import time
 import config
 
 
+def write_json_atomic(path, data, **json_kwargs) -> None:
+    """
+    Write JSON to a file atomically (temp file + os.replace).
+
+    A crash or power loss mid-write can never leave a truncated file —
+    the old content survives until the new one is complete.
+    """
+    import json
+
+    path = str(path)
+    tmp_path = path + '.tmp'
+    with open(tmp_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, **json_kwargs)
+    os.replace(tmp_path, path)
+
+
 def ensure_extended_path(path: str) -> str:
     """
     Convert a path to extended-length path format for Windows.

@@ -57,10 +57,14 @@ class SessionManager:
                 'version': config.APP_VERSION,
             }
             
-            # Save to file
-            with open(self.session_file, 'w', encoding='utf-8') as f:
-                json.dump(state, f, indent=2, ensure_ascii=False, default=str)
-            
+            # Save to file (atomically — a crash mid-write must never
+            # destroy the previous session, this IS the crash-recovery file)
+            from utils.file_utils import write_json_atomic
+            write_json_atomic(
+                self.session_file, state,
+                indent=2, ensure_ascii=False, default=str
+            )
+
             self.logger.debug(f"Session saved to {self.session_file}")
             return True
             
@@ -263,14 +267,16 @@ class SessionManager:
 class AutoSaveManager:
     """
     Manages automatic saving of session state.
-    
-    Works with a timer to periodically save state.
+
+    Runs on a QTimer so the state getter (which reads Qt widgets) always
+    executes on the GUI thread — the old threading.Timer read widget
+    state from a background thread, which is undefined behavior in Qt.
     """
-    
+
     def __init__(self, session_manager: SessionManager):
         """
         Initialize auto-save manager.
-        
+
         Args:
             session_manager: SessionManager instance to use
         """
@@ -278,62 +284,68 @@ class AutoSaveManager:
         self.logger = get_logger()
         self._timer = None
         self._state_getter = None
+        self._pause_check = None
         self._interval = config.AUTO_SAVE_INTERVAL
-    
+
     def set_state_getter(self, getter_func) -> None:
         """
         Set the function that returns current state.
-        
+
         Args:
             getter_func: Function that returns state dictionary
         """
         self._state_getter = getter_func
-    
-    def start(self, interval: int = None) -> None:
+
+    def set_pause_check(self, pause_func) -> None:
+        """
+        Set a predicate that pauses auto-save while true (e.g. mid-send,
+        when tabs are being mutated by the send worker).
+        """
+        self._pause_check = pause_func
+
+    def start(self, interval: float = None) -> None:
         """
         Start auto-save timer.
-        
+
+        Must be called from the GUI thread.
+
         Args:
             interval: Save interval in seconds (default from config)
         """
         if interval:
             self._interval = interval
-        
-        self._schedule_save()
+
+        from PyQt5.QtCore import QTimer
+
+        if self._timer is None:
+            self._timer = QTimer()
+            self._timer.timeout.connect(self._do_save)
+
+        self._timer.start(int(self._interval * 1000))
         self.logger.info(f"Auto-save started (interval: {self._interval}s)")
-    
+
     def stop(self) -> None:
         """Stop auto-save timer."""
         if self._timer:
-            self._timer.cancel()
-            self._timer = None
+            self._timer.stop()
         self.logger.info("Auto-save stopped")
-    
-    def _schedule_save(self) -> None:
-        """Schedule the next auto-save."""
-        import threading
-        
-        self._timer = threading.Timer(self._interval, self._do_save)
-        self._timer.daemon = True
-        self._timer.start()
-    
+
     def _do_save(self) -> None:
-        """Perform auto-save and reschedule."""
+        """Perform auto-save (skipped while paused)."""
         try:
+            if self._pause_check and self._pause_check():
+                return
             if self._state_getter:
                 state = self._state_getter()
                 if state:
                     self.session_manager.save_session(state)
         except Exception as e:
             self.logger.error(f"Auto-save error: {e}")
-        finally:
-            # Reschedule next save
-            self._schedule_save()
-    
+
     def save_now(self) -> bool:
         """
         Trigger immediate save.
-        
+
         Returns:
             True if saved successfully
         """

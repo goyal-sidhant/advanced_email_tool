@@ -15,7 +15,20 @@ from PyQt5.QtCore import Qt, pyqtSignal, QThread, pyqtSlot
 from ui.components.progress_log import ProgressLog
 from ui.components.dialogs import show_error, show_info, show_warning, show_question
 from ui.components.tab_navigation import TabNavigationBar
+import time
+
 from core.outlook_sender import OutlookSender, detect_new_outlook
+
+
+def format_eta(elapsed_seconds: float, done: int, total: int) -> str:
+    """Human-readable time remaining, from progress so far ('' if unknown)."""
+    if done <= 0 or done >= total or elapsed_seconds <= 0:
+        return ""
+
+    remaining = elapsed_seconds / done * (total - done)
+    if remaining < 90:
+        return f"about {int(round(remaining))}s left"
+    return f"about {int(round(remaining / 60))} min left"
 from core.email_builder import EmailBuilder, Email
 from data.checkpoint import CheckpointManager
 from utils import get_logger
@@ -25,11 +38,12 @@ import config
 
 class SendWorker(QThread):
     """Background worker for sending emails."""
-    
+
     progress = pyqtSignal(int, int, str, bool, str)  # current, total, email, success, message
+    sending = pyqtSignal(int, int, str)  # current, total, recipient (in flight)
     finished = pyqtSignal(dict)  # results summary
     error = pyqtSignal(str)
-    
+
     def __init__(
         self,
         sender: OutlookSender,
@@ -45,32 +59,37 @@ class SendWorker(QThread):
         self.interval = interval
         self.display_only = display_only
         self._cancelled = False
-    
+
     def run(self):
         try:
             def progress_callback(current, total, email, success, message):
                 to_str = "; ".join(email.to) if email.to else "Unknown"
                 self.progress.emit(current, total, to_str, success, message)
-                
+
                 # Record in checkpoint
                 if success:
                     self.checkpoint.record_success(email.row_index, to_str)
                 else:
                     self.checkpoint.record_failure(email.row_index, to_str, message)
-            
+
+            def before_send(current, total, email):
+                to_str = "; ".join(email.to) if email.to else "Unknown"
+                self.sending.emit(current, total, to_str)
+
             def cancel_check():
                 return self._cancelled
-            
+
             results = self.sender.send_emails_batch(
                 self.emails,
                 display_only=self.display_only,
                 interval=self.interval,
                 progress_callback=progress_callback,
-                cancel_check=cancel_check
+                cancel_check=cancel_check,
+                before_send_callback=before_send
             )
-            
+
             self.finished.emit(results)
-            
+
         except Exception as e:
             self.error.emit(str(e))
     
@@ -324,6 +343,12 @@ class TabSend(QWidget):
         
         controls_layout.addStretch()
         
+        self.retry_btn = QPushButton()
+        self.retry_btn.setToolTip("Send again only to the recipients that failed")
+        self.retry_btn.clicked.connect(self._retry_failed)
+        self.retry_btn.setVisible(False)
+        controls_layout.addWidget(self.retry_btn)
+
         self.resume_btn = QPushButton("Resume Previous")
         self.resume_btn.clicked.connect(self._resume_sending)
         self.resume_btn.setVisible(False)
@@ -588,11 +613,14 @@ class TabSend(QWidget):
 
         # Update UI
         self._is_sending = True
+        self._send_started_at = time.monotonic()
         self.start_btn.setEnabled(False)
         self.cancel_btn.setEnabled(True)
         self.account_combo.setEnabled(False)
         self.interval_spin.setEnabled(False)
         self.preview_check.setEnabled(False)
+        self.retry_btn.setVisible(False)
+        self.resume_btn.setVisible(False)
 
         self.progress_log.clear()
         self.progress_log.start_operation(
@@ -611,23 +639,24 @@ class TabSend(QWidget):
             preview_mode
         )
         self._send_worker.progress.connect(self._on_progress)
+        self._send_worker.sending.connect(self._on_sending)
         self._send_worker.finished.connect(self._on_finished)
         self._send_worker.error.connect(self._on_error)
         self._send_worker.start()
 
     def _cancel_sending(self) -> None:
-        """Cancel the send operation."""
+        """
+        Cancel the send operation immediately.
+
+        No confirmation dialog: every second spent reading one is another
+        email going out, and a cancelled run is fully resumable.
+        """
         if self._send_worker:
-            reply = QMessageBox.question(
-                self,
-                "Cancel Sending?",
-                "Are you sure you want to cancel? Progress will be saved.",
-                QMessageBox.Yes | QMessageBox.No
+            self._send_worker.cancel()
+            self.cancel_btn.setEnabled(False)
+            self.progress_log.log_warning(
+                "Cancelling — finishing the email currently being sent…"
             )
-            
-            if reply == QMessageBox.Yes:
-                self._send_worker.cancel()
-                self.progress_log.log_warning("Cancelling... (waiting for current email)")
     
     def _resume_sending(self) -> None:
         """Resume an incomplete session, continuing its existing checkpoint."""
@@ -660,29 +689,43 @@ class TabSend(QWidget):
         self.progress_log.log_info(msg)
         self._launch_send(resume_emails)
     
+    @pyqtSlot(int, int, str)
+    def _on_sending(self, current: int, total: int, recipient: str) -> None:
+        """Show the in-flight recipient while the send happens."""
+        self.status_label.setText(f"Sending to {recipient} ({current}/{total})…")
+
     @pyqtSlot(int, int, str, bool, str)
     def _on_progress(self, current: int, total: int, email: str, success: bool, message: str) -> None:
         """Handle progress updates."""
         self.progress_log.set_progress(current, total)
-        
+
         if success:
             self.progress_log.log_success(f"Sent to: {email}")
         else:
             self.progress_log.log_error(f"Failed: {email} - {message}")
-        
-        self.status_label.setText(f"Sending: {current}/{total}")
-    
+
+        elapsed = time.monotonic() - getattr(self, '_send_started_at', time.monotonic())
+        eta = format_eta(elapsed, current, total)
+        suffix = f" — {eta}" if eta else ""
+        self.status_label.setText(f"Sending: {current}/{total}{suffix}")
+
     @pyqtSlot(dict)
     def _on_finished(self, results: dict) -> None:
         """Handle send completion."""
         self._is_sending = False
 
-        # A cancelled run stays resumable; only a finished run is finalized
-        if results.get('cancelled', False):
+        sent = results.get('sent', 0)
+        failed = results.get('failed', 0)
+        cancelled = results.get('cancelled', False)
+        aborted_reason = results.get('aborted_reason', '')
+
+        # A cancelled or self-aborted run stays resumable; only a run that
+        # actually reached the end is finalized
+        if cancelled or aborted_reason:
             self.checkpoint_manager.suspend_session()
         else:
             self.checkpoint_manager.complete_session(success=True)
-        
+
         # Update UI
         self.start_btn.setEnabled(True)
         self.cancel_btn.setEnabled(False)
@@ -690,17 +733,18 @@ class TabSend(QWidget):
         self.interval_spin.setEnabled(True)
         self.preview_check.setEnabled(True)
         self.resume_btn.setVisible(False)
-        
-        sent = results.get('sent', 0)
-        failed = results.get('failed', 0)
-        cancelled = results.get('cancelled', False)
-        
+
         self.progress_log.end_operation("Email sending", sent, failed)
-        
+
         if cancelled:
             self.status_label.setText(f"Cancelled: {sent} sent, {failed} failed")
             self.progress_log.log_warning("Operation cancelled by user")
             self.resume_btn.setVisible(True)
+        elif aborted_reason:
+            self.status_label.setText(f"Stopped: {sent} sent, {failed} failed")
+            self.progress_log.log_error(aborted_reason)
+            self.resume_btn.setVisible(True)
+            show_warning(self, "Sending Stopped", aborted_reason)
         else:
             self.status_label.setText(f"Complete: {sent} sent, {failed} failed")
             if failed == 0:
@@ -709,10 +753,45 @@ class TabSend(QWidget):
                 show_warning(
                     self,
                     "Complete with Errors",
-                    f"Sent: {sent}\nFailed: {failed}\n\nCheck the log for details."
+                    f"Sent: {sent}\nFailed: {failed}\n\n"
+                    f"Use 'Retry {failed} Failed' to send again to just "
+                    f"those recipients."
                 )
-        
+
+        # Failed rows can be retried on their own
+        if failed > 0:
+            failed_rows = set(self.checkpoint_manager.failed)
+            retryable = [e for e in self._emails if e.row_index in failed_rows]
+            if retryable:
+                self.retry_btn.setText(f"↻ Retry {len(retryable)} Failed")
+                self.retry_btn.setVisible(True)
+
         self.send_completed.emit(results)
+
+    def _retry_failed(self) -> None:
+        """Send again to only the recipients that failed in the last run."""
+        failed_rows = set(self.checkpoint_manager.failed)
+        retry_emails = [e for e in self._emails if e.row_index in failed_rows]
+
+        if not retry_emails:
+            show_error(self, "Nothing to Retry", "No failed recipients found.")
+            self.retry_btn.setVisible(False)
+            return
+
+        account_email = self.account_combo.currentData()
+        if account_email:
+            self.outlook_sender.select_account(account_email)
+
+        # Fresh checkpoint session covering just the failed rows
+        self.checkpoint_manager.start_session(
+            [e.row_index for e in retry_emails],
+            sending_account=account_email or ""
+        )
+
+        self.progress_log.log_info(
+            f"Retrying {len(retry_emails)} failed recipient(s)…"
+        )
+        self._launch_send(retry_emails)
     
     @pyqtSlot(str)
     def _on_error(self, error: str) -> None:

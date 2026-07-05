@@ -105,9 +105,9 @@ class RecipientListStorage:
             if recipient_emails:
                 list_data['recipient_emails'] = list(recipient_emails)
             
-            with open(list_path, 'w', encoding='utf-8') as f:
-                json.dump(list_data, f, indent=2)
-            
+            from utils.file_utils import write_json_atomic
+            write_json_atomic(list_path, list_data, indent=2)
+
             action = "updated" if is_update else "saved"
             self.logger.info(f"Recipient list {action}: {name} ({len(selected_indices)} recipients)")
             return True, f"List {action} with {len(selected_indices)} recipients"

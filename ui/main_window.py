@@ -289,6 +289,8 @@ class MainWindow(QMainWindow):
     def _setup_auto_save(self) -> None:
         """Set up auto-save functionality."""
         self.auto_save_manager.set_state_getter(self._get_session_state)
+        # Don't snapshot widget state while a send is mutating it
+        self.auto_save_manager.set_pause_check(self.tab_send.is_sending)
         self.auto_save_manager.start(config.AUTO_SAVE_INTERVAL)
     
     def _on_data_loaded(self, columns: list, data: list) -> None:

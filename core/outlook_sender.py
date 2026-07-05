@@ -17,6 +17,27 @@ from core.email_builder import Email
 import config
 
 
+def friendly_send_error(raw_error: str) -> str:
+    """
+    Translate common Outlook COM failures into instructions a
+    non-technical user can act on. The raw error goes to the log file.
+    """
+    text = str(raw_error).lower()
+
+    if '-2147467260' in text or 'operation aborted' in text:
+        return ("Outlook blocked the send — check for a security prompt "
+                "in the Outlook window, then retry")
+    if 'rpc server' in text or 'server unavailable' in text or '-2147023174' in text:
+        return ("Outlook stopped responding — restart Outlook, "
+                "then use Resume to continue")
+    if 'not registered' in text or 'invalid class string' in text:
+        return "Microsoft Outlook is not installed or not accessible"
+    if 'unknown recipient' in text or 'address is not valid' in text:
+        return "The recipient's email address was rejected by Outlook"
+
+    return f"Error: {raw_error}"
+
+
 def detect_new_outlook() -> bool:
     """
     Check whether the user is on "New Outlook" (olk.exe), which has no
@@ -336,7 +357,7 @@ class OutlookSender:
                 
         except Exception as e:
             self.logger.error(f"Error sending email: {e}", exc_info=True)
-            return False, f"Error: {e}"
+            return False, friendly_send_error(e)
     
     def _process_embedded_images(
         self, 
@@ -404,30 +425,38 @@ class OutlookSender:
         
         return body_html
     
+    # Stop the batch after this many consecutive failures — a wedged
+    # Outlook would otherwise grind through every remaining email
+    MAX_CONSECUTIVE_FAILURES = 3
+
     def send_emails_batch(
         self,
         emails: List[Email],
         display_only: bool = False,
         interval: float = None,
         progress_callback=None,
-        cancel_check=None
+        cancel_check=None,
+        before_send_callback=None
     ) -> Dict[str, Any]:
         """
         Send multiple emails with progress tracking.
-        
+
         Args:
             emails: List of Email objects
             display_only: If True, display instead of send
             interval: Seconds between emails (default from config)
             progress_callback: Function(current, total, email, status, message)
             cancel_check: Function returning True if cancelled
-            
+            before_send_callback: Function(current, total, email) fired just
+                before each send so the UI can show the in-flight recipient
+
         Returns:
-            Dictionary with results summary
+            Dictionary with results summary. 'aborted_reason' is set when
+            the batch stopped itself after consecutive failures.
         """
         if interval is None:
             interval = config.SEND_INTERVAL
-        
+
         results = {
             'total': len(emails),
             'sent': 0,
@@ -435,17 +464,22 @@ class OutlookSender:
             'cancelled': False,
             'details': []
         }
-        
+
+        consecutive_failures = 0
+
         for idx, email in enumerate(emails):
             # Check for cancellation
             if cancel_check and cancel_check():
                 results['cancelled'] = True
                 self.logger.info("Batch send cancelled by user")
                 break
-            
+
+            if before_send_callback:
+                before_send_callback(idx + 1, len(emails), email)
+
             # Send email
             success, message = self.send_email(email, display_only)
-            
+
             detail = {
                 'index': idx,
                 'to': email.to,
@@ -454,27 +488,50 @@ class OutlookSender:
                 'message': message
             }
             results['details'].append(detail)
-            
+
             if success:
                 results['sent'] += 1
+                consecutive_failures = 0
             else:
                 results['failed'] += 1
-            
+                consecutive_failures += 1
+
             # Progress callback
             if progress_callback:
                 progress_callback(idx + 1, len(emails), email, success, message)
-            
-            # Delay between emails (except for last one)
+
+            if consecutive_failures >= self.MAX_CONSECUTIVE_FAILURES:
+                results['aborted_reason'] = (
+                    f"Stopped after {consecutive_failures} consecutive failures — "
+                    "Outlook may be unavailable. Fix the problem, then use "
+                    "Resume to continue."
+                )
+                self.logger.error(results['aborted_reason'])
+                break
+
+            # Delay between emails (except for last one); sliced so a
+            # cancel takes effect within ~100ms instead of the full interval
             if idx < len(emails) - 1:
-                time.sleep(interval)
-        
+                self._interruptible_sleep(interval, cancel_check)
+
         self.logger.info(
             f"Batch complete: {results['sent']} sent, "
             f"{results['failed']} failed, "
             f"cancelled={results['cancelled']}"
         )
-        
+
         return results
+
+    @staticmethod
+    def _interruptible_sleep(seconds: float, cancel_check=None) -> None:
+        """Sleep in 0.1s slices, returning early once cancelled."""
+        remaining = float(seconds)
+        while remaining > 0:
+            if cancel_check and cancel_check():
+                return
+            slice_len = min(0.1, remaining)
+            time.sleep(slice_len)
+            remaining -= slice_len
     
     def create_preview_html(self, email: Email) -> str:
         """

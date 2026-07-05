@@ -44,6 +44,7 @@ class CheckpointManager:
         self.completed: List[int] = []
         self.failed: List[int] = []
         self.is_active: bool = False
+        self._checkpoint_cache: Optional[Dict[str, Any]] = None
     
     def _ensure_directory(self) -> None:
         """Ensure checkpoints directory exists."""
@@ -138,28 +139,30 @@ class CheckpointManager:
     def _update_checkpoint(self) -> None:
         """Update the checkpoint file with current progress."""
         try:
-            # Load existing checkpoint
-            checkpoint_data = self._load_checkpoint()
+            # Use the in-memory copy; re-reading the file per email is
+            # pure I/O churn (worse on OneDrive-synced folders)
+            checkpoint_data = self._checkpoint_cache or self._load_checkpoint()
             if not checkpoint_data:
                 return
-            
+
             checkpoint_data['completed_indices'] = self.completed.copy()
             checkpoint_data['failed_indices'] = self.failed.copy()
             checkpoint_data['last_updated'] = datetime.now().isoformat()
             checkpoint_data['progress_percent'] = (
                 len(self.completed) + len(self.failed)
             ) / self.total * 100 if self.total > 0 else 0
-            
+
             self._save_checkpoint(checkpoint_data)
-            
+
         except Exception as e:
             self.logger.error(f"Error updating checkpoint: {e}")
     
     def _save_checkpoint(self, data: Dict[str, Any]) -> None:
-        """Save checkpoint data to file."""
+        """Save checkpoint data to file (atomically) and cache it in memory."""
         try:
-            with open(self.checkpoint_file, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2)
+            from utils.file_utils import write_json_atomic
+            write_json_atomic(self.checkpoint_file, data, indent=2)
+            self._checkpoint_cache = data
         except Exception as e:
             self.logger.error(f"Error saving checkpoint: {e}")
     
@@ -310,6 +313,7 @@ class CheckpointManager:
         self.completed = checkpoint_data.get('completed_indices', [])
         self.failed = checkpoint_data.get('failed_indices', [])
         self.is_active = True
+        self._checkpoint_cache = checkpoint_data
         
         remaining = self.get_remaining_indices()
         
@@ -337,6 +341,7 @@ class CheckpointManager:
             self.completed = []
             self.failed = []
             self.is_active = False
+            self._checkpoint_cache = None
             
             self.logger.info("Checkpoint cleared")
             return True
