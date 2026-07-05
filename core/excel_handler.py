@@ -1,9 +1,10 @@
 """
-Advanced Email Tool - Excel Handler
+Advanced Email Tool - Excel Handler (loads never lock the file on disk)
 ===================================
 Handles loading, validating, filtering, and sorting Excel data.
 """
 
+import io
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 import openpyxl
@@ -40,6 +41,22 @@ class ExcelHandler:
                 self.logger.warning(f"Error closing workbook: {e}")
             self.workbook = None
             self.worksheet = None
+
+    def _open_workbook(self, file_path: str):
+        """
+        Open a workbook from an in-memory copy of the file.
+
+        The file handle is held only while the bytes are copied, so the
+        file on disk stays unlocked — the user can keep it open in Excel,
+        save changes, and click Refresh to pick them up.
+        """
+        with open(file_path, 'rb') as f:
+            buffer = io.BytesIO(f.read())
+        return openpyxl.load_workbook(
+            buffer,
+            read_only=True,
+            data_only=True  # Get values, not formulas
+        )
 
     def _find_sheet_name(self, sheet_name: str) -> Optional[str]:
         """Find actual sheet name using case-insensitive match."""
@@ -84,13 +101,9 @@ class ExcelHandler:
             if not path.suffix.lower() in ['.xlsx', '.xlsm']:
                 return False, "File must be .xlsx or .xlsm format"
             
-            # Load workbook
-            self.workbook = openpyxl.load_workbook(
-                filename=file_path,
-                read_only=True,
-                data_only=True  # Get values, not formulas
-            )
-            
+            # Load workbook from an in-memory copy (keeps the file unlocked)
+            self.workbook = self._open_workbook(file_path)
+
             # Select worksheet (case-insensitive matching)
             if sheet_name:
                 actual_sheet = self._find_sheet_name(sheet_name)
@@ -189,25 +202,18 @@ class ExcelHandler:
         """
         try:
             # Close any previously opened workbook to release file handle
-            if self.workbook:
-                self.workbook.close()
-                self.workbook = None
-                self.worksheet = None
+            self.close()
 
             self.logger.info(f"Loading Excel file with offset: {file_path} (row={start_row}, col={start_col})")
-            
+
             path = Path(file_path)
             if not path.exists():
                 return False, f"File not found: {file_path}"
-            
+
             if not path.suffix.lower() in ['.xlsx', '.xlsm']:
                 return False, "File must be .xlsx or .xlsm format"
-            
-            self.workbook = openpyxl.load_workbook(
-                filename=file_path,
-                read_only=True,
-                data_only=True
-            )
+
+            self.workbook = self._open_workbook(file_path)
             
             if sheet_name:
                 actual_sheet = self._find_sheet_name(sheet_name)

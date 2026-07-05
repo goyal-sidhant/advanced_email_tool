@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import (
     QMessageBox, QSplitter, QFrame, QSpinBox, QRadioButton,
     QProgressDialog
 )
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal, QThread
 from PyQt5.QtGui import QColor, QBrush
 
 from core.excel_handler import ExcelHandler
@@ -26,10 +26,41 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 
 
+class ExcelLoadWorker(QThread):
+    """Loads a workbook off the UI thread so the window never freezes."""
+
+    finished_load = pyqtSignal(bool, str)  # success, error message
+
+    def __init__(self, handler, file_path, sheet_name=None,
+                 start_row=None, start_col=None):
+        super().__init__()
+        self.handler = handler
+        self.file_path = file_path
+        self.sheet_name = sheet_name
+        self.start_row = start_row
+        self.start_col = start_col
+
+    def run(self):
+        try:
+            if self.start_row is not None or self.start_col is not None:
+                ok, error = self.handler.load_file_with_offset(
+                    self.file_path,
+                    self.sheet_name,
+                    start_row=self.start_row or 1,
+                    start_col=self.start_col or 1
+                )
+            else:
+                ok, error = self.handler.load_file(self.file_path, self.sheet_name)
+        except Exception as e:
+            ok, error = False, str(e)
+
+        self.finished_load.emit(ok, error)
+
+
 class TabExcel(QWidget):
     """
     Excel file loading and column mapping tab.
-    
+
     Features:
     - Load Excel file
     - Select worksheet
@@ -52,7 +83,8 @@ class TabExcel(QWidget):
         self._file_path: Optional[str] = None
         self._columns: List[str] = []
         self._data: List[Dict[str, Any]] = []
-        
+        self._load_worker: Optional[ExcelLoadWorker] = None
+
         self._setup_ui()
 
     def _find_column(self, column_name: str) -> Optional[str]:
@@ -320,21 +352,64 @@ class TabExcel(QWidget):
     
     def _load_file(self, file_path: str) -> None:
         """
-        Load an Excel file.
-        
+        Load an Excel file (in a worker thread — the UI stays responsive).
+
         Args:
             file_path: Path to Excel file
         """
         self.logger.info(f"Loading file: {file_path}")
-        
-        success, error = self.excel_handler.load_file(file_path)
-        
-        if not success:
+        self._start_load(file_path, on_success=self._update_ui_after_load)
+
+    def _start_load(
+        self,
+        file_path: str,
+        sheet_name: Optional[str] = None,
+        start_row: Optional[int] = None,
+        start_col: Optional[int] = None,
+        on_success=None
+    ) -> None:
+        """Run an Excel load in a worker thread with the controls disabled."""
+        if self._load_worker and self._load_worker.isRunning():
+            return  # a load is already in flight
+
+        import os
+        self.row_count_label.setText(f"Loading {os.path.basename(file_path)}…")
+        self._set_loading(True)
+
+        self._load_worker = ExcelLoadWorker(
+            self.excel_handler, file_path, sheet_name, start_row, start_col
+        )
+        self._load_worker.finished_load.connect(
+            lambda ok, error: self._on_load_finished(ok, error, file_path, on_success)
+        )
+        self._load_worker.start()
+
+    def _on_load_finished(self, ok: bool, error: str, file_path: str, on_success) -> None:
+        """Handle worker completion on the UI thread."""
+        self._set_loading(False)
+
+        if not ok:
+            self.row_count_label.setText("")
             show_error(self, "Error Loading File", error)
             return
-        
+
         self._file_path = file_path
-        self._update_ui_after_load()
+        if on_success:
+            on_success()
+
+    def _set_loading(self, loading: bool) -> None:
+        """Toggle controls while a load is in flight."""
+        self.browse_btn.setEnabled(not loading)
+        has_file = bool(self._file_path)
+        for widget in (self.reload_btn, self.validate_btn, self.apply_offset_btn):
+            widget.setEnabled(not loading and has_file)
+        self.sheet_combo.setEnabled(not loading and self.sheet_combo.count() > 0)
+
+    def _status_message(self, message: str) -> None:
+        """Show a transient message in the main window's status bar."""
+        status_bar = getattr(self.window(), 'status_bar', None)
+        if status_bar is not None:
+            status_bar.showMessage(message, 4000)
     
     def _update_ui_after_load(self) -> None:
         """Update UI after successful file load."""
@@ -365,14 +440,9 @@ class TabExcel(QWidget):
         """Handle worksheet selection change."""
         if index < 0 or not self._file_path:
             return
-        
+
         sheet_name = self.sheet_combo.currentText()
-        success, error = self.excel_handler.load_file(self._file_path, sheet_name)
-        
-        if success:
-            self._load_sheet_data()
-        else:
-            show_error(self, "Error Loading Sheet", error)
+        self._start_load(self._file_path, sheet_name, on_success=self._load_sheet_data)
     
     def _load_sheet_data(self) -> None:
         """Load data from current sheet and update UI."""
@@ -588,24 +658,23 @@ class TabExcel(QWidget):
         current_row_offset = self.start_row_spin.value()
         current_col_offset = self.start_col_spin.value()
 
-        # Reload file with current offsets
-        if current_row_offset > 1 or current_col_offset > 1:
-            success, error = self.excel_handler.load_file_with_offset(
-                self._file_path,
-                current_sheet,
-                start_row=current_row_offset,
-                start_col=current_col_offset
-            )
-        else:
-            success, error = self.excel_handler.load_file(self._file_path, current_sheet)
-
-        if success:
+        def after_reload():
             self._load_sheet_data()
             # Restore column mapping if columns still exist
             self._restore_column_mapping(current_mapping)
-            show_info(self, "Refreshed", "File reloaded with latest changes.")
+            self._status_message(
+                f"Refreshed — {len(self._data)} rows reloaded from file"
+            )
+
+        # Reload file with current offsets (in a worker thread)
+        if current_row_offset > 1 or current_col_offset > 1:
+            self._start_load(
+                self._file_path, current_sheet,
+                start_row=current_row_offset, start_col=current_col_offset,
+                on_success=after_reload
+            )
         else:
-            show_error(self, "Refresh Error", error)
+            self._start_load(self._file_path, current_sheet, on_success=after_reload)
 
     def _restore_column_mapping(self, mapping: Dict[str, Optional[str]]) -> None:
         """
@@ -768,21 +837,20 @@ class TabExcel(QWidget):
         
         start_row = self.start_row_spin.value()
         start_col = self.start_col_spin.value()
-        
-        # Load with offset
-        sheet_name = self.sheet_combo.currentText() if self.sheet_combo.currentIndex() >= 0 else None
-        success, error = self.excel_handler.load_file_with_offset(
-            self._file_path, 
-            sheet_name,
-            start_row=start_row,
-            start_col=start_col
-        )
-        
-        if success:
+
+        def after_reload():
             self._load_sheet_data()
-            show_info(self, "Reloaded", f"Data reloaded starting from row {start_row}, column {start_col}.")
-        else:
-            show_error(self, "Error", error)
+            self._status_message(
+                f"Reloaded starting from row {start_row}, column {start_col}"
+            )
+
+        # Load with offset (in a worker thread)
+        sheet_name = self.sheet_combo.currentText() if self.sheet_combo.currentIndex() >= 0 else None
+        self._start_load(
+            self._file_path, sheet_name,
+            start_row=start_row, start_col=start_col,
+            on_success=after_reload
+        )
     
     def _export_template(self) -> None:
         """Export a blank Excel template with sample structure."""
@@ -871,18 +939,28 @@ class TabExcel(QWidget):
             show_error(self, "Export Error", f"Could not export template: {e}")
             self.logger.error(f"Template export error: {e}")
     
-    def load_file_path(self, file_path: str) -> bool:
+    def load_file_path(self, file_path: str, on_loaded=None) -> bool:
         """
-        Load a specific file path (for session restore).
-        
+        Load a specific file path (for session/profile restore).
+
+        The load runs in a worker thread; anything that depends on the data
+        (column mapping, recipient selection) must go in on_loaded.
+
         Args:
             file_path: Path to Excel file
-            
+            on_loaded: Called after the data is loaded and the UI updated
+
         Returns:
-            True if loaded successfully
+            True if the file exists and the load was started
         """
         import os
-        if os.path.exists(file_path):
-            self._load_file(file_path)
-            return self.is_data_loaded()
-        return False
+        if not os.path.exists(file_path):
+            return False
+
+        def after_load():
+            self._update_ui_after_load()
+            if on_loaded:
+                on_loaded()
+
+        self._start_load(file_path, on_success=after_load)
+        return True

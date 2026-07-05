@@ -21,3 +21,20 @@ def qapp():
 
     app = QApplication.instance() or QApplication([])
     yield app
+
+
+@pytest.fixture
+def wait_until(qapp):
+    """Spin the event loop until a condition holds (or fail the test)."""
+    import time
+
+    def _wait(condition, timeout_ms=5000, message="condition"):
+        deadline = time.time() + timeout_ms / 1000
+        while time.time() < deadline:
+            qapp.processEvents()
+            if condition():
+                return True
+            time.sleep(0.01)
+        pytest.fail(f"Timed out waiting for: {message}")
+
+    return _wait

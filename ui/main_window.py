@@ -451,21 +451,28 @@ class MainWindow(QMainWindow):
     
     def _restore_session_state(self, state: Dict[str, Any]) -> None:
         """Restore session from saved state."""
-        # Restore Excel file
+        # Restore Excel file; the load runs in a worker thread, so column
+        # mapping and recipient selection are applied once the data arrives
         excel_path = state.get('excel_file_path')
         if excel_path:
-            self.tab_excel.load_file_path(excel_path)
-        
-        # Restore column mapping
-        mapping = state.get('column_mapping', {})
-        if mapping:
-            self.tab_excel.set_column_mapping(mapping)
-        
+            started = self.tab_excel.load_file_path(
+                excel_path,
+                on_loaded=lambda: self._restore_data_dependent_state(state)
+            )
+            if not started:
+                show_warning(
+                    self,
+                    "Excel File Not Found",
+                    f"The Excel file from your last session was not found:\n"
+                    f"{excel_path}\n\n"
+                    "Click Browse on the Excel tab to reselect it."
+                )
+
         # Restore compose
         self.tab_compose.set_subject_template(state.get('subject_template', ''))
         self.tab_compose.set_body_template(state.get('body_template', ''))
         self.tab_compose.set_universal_bcc(state.get('universal_bcc', ''))
-        
+
         # Restore attachments
         static = state.get('static_attachments', [])
         if static:
@@ -484,10 +491,17 @@ class MainWindow(QMainWindow):
             state.get('enable_dynamic_attachments', True)
         )
 
-        # Restore recipient selection
+    def _restore_data_dependent_state(self, state: Dict[str, Any]) -> None:
+        """Apply the parts of a session that need Excel data to be loaded."""
+        mapping = state.get('column_mapping', {})
+        if mapping:
+            self.tab_excel.set_column_mapping(mapping)
+
         selected = state.get('selected_recipients', [])
         if selected:
             self.tab_recipients.set_selected_indices(selected)
+
+        self.status_bar.showMessage("Session restored", 4000)
     
     def _check_restore_session(self) -> None:
         """Check for and offer to restore saved session."""
@@ -757,12 +771,16 @@ class MainWindow(QMainWindow):
         excel_path = excel_config.get('file_path', '')
 
         if excel_path and os.path.exists(excel_path):
-            self.tab_excel.load_file_path(excel_path)
-
-            # Restore column mapping after file is loaded
+            # The load runs in a worker thread — apply the column mapping
+            # once the data is actually available
             mapping = excel_config.get('column_mapping', {})
-            if mapping:
-                self.tab_excel.set_column_mapping(mapping)
+            self.tab_excel.load_file_path(
+                excel_path,
+                on_loaded=(
+                    (lambda: self.tab_excel.set_column_mapping(mapping))
+                    if mapping else None
+                )
+            )
         elif excel_path:
             show_warning(
                 self,
