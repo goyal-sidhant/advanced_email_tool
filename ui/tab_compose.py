@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (
     QPushButton, QLabel, QLineEdit, QComboBox,
     QMessageBox, QSplitter
 )
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 
 from ui.components.rich_text_editor import RichTextEditor
 from ui.components.dialogs import show_error, show_info, show_warning, InputDialog
@@ -46,7 +46,14 @@ class TabCompose(QWidget):
         self.template_storage = TemplateStorage()
         self.template_engine = TemplateEngine()
         self._available_columns: List[str] = []
-        
+
+        # Debounce for content changes: serializing the whole document on
+        # every keystroke makes typing laggy (worse with pasted images)
+        self._change_timer = QTimer(self)
+        self._change_timer.setSingleShot(True)
+        self._change_timer.setInterval(300)
+        self._change_timer.timeout.connect(self._flush_content_change)
+
         self._setup_ui()
     
     def _setup_ui(self) -> None:
@@ -295,9 +302,24 @@ class TabCompose(QWidget):
             self.subject_input.setCursorPosition(cursor_pos + len(var_name) + 2)
     
     def _on_content_changed(self) -> None:
-        """Handle content changes."""
+        """Handle content changes (debounced — fires 300ms after typing stops)."""
+        self._change_timer.start()
+
+    def _flush_content_change(self) -> None:
+        """Run the (expensive) change propagation."""
         self._update_variable_info()
         self.template_changed.emit()
+
+    def flush_pending_changes(self) -> None:
+        """
+        Apply a pending debounced change immediately.
+
+        Called before emails are built so a keystroke made moments before
+        switching tabs is never lost.
+        """
+        if self._change_timer.isActive():
+            self._change_timer.stop()
+            self._flush_content_change()
     
     def _update_variable_info(self) -> None:
         """Update variable usage information."""

@@ -361,10 +361,10 @@ class MainWindow(QMainWindow):
         self.email_builder.set_universal_bcc(
             self.tab_compose.get_universal_bcc()
         )
-        # Set embedded images (for inline display)
-        self.email_builder.set_embedded_images(
-            self.tab_compose.get_embedded_images()
-        )
+        # NOTE: embedded images are extracted in _sync_compose_state() when
+        # emails are actually built — doing it here would re-serialize and
+        # regex-scan the whole document (megabytes with pasted images) on
+        # every keystroke
     
     def _on_attachments_changed(self) -> None:
         """Handle attachment configuration changes."""
@@ -405,13 +405,22 @@ class MainWindow(QMainWindow):
         elif index == 5:  # Send tab
             self._update_send_tab()
     
+    def _sync_compose_state(self) -> None:
+        """Bring the email builder fully up to date before building emails."""
+        self.tab_compose.flush_pending_changes()
+        self.email_builder.set_embedded_images(
+            self.tab_compose.get_embedded_images()
+        )
+
     def _update_preview(self) -> None:
         """Update preview tab with current data."""
+        self._sync_compose_state()
+
         data = self.tab_excel.get_data()
         columns = self.tab_excel.get_columns()
         selected_indices = self.tab_recipients.get_selected_indices()
         mapping = self.tab_excel.get_column_mapping()
-        
+
         self.tab_preview.set_email_builder(self.email_builder)
         self.tab_preview.set_preview_data(
             data,
@@ -424,6 +433,8 @@ class MainWindow(QMainWindow):
     
     def _update_send_tab(self) -> None:
         """Update send tab with emails to send."""
+        self._sync_compose_state()
+
         data = self.tab_excel.get_data()
         selected_indices = self.tab_recipients.get_selected_indices()
         
