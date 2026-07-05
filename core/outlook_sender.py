@@ -157,11 +157,14 @@ class OutlookSender:
             return win32com.client.Dispatch("Outlook.Application")
     
     def _load_accounts(self) -> None:
-        """Load available email accounts from Outlook."""
+        """Load available email accounts from Outlook (thread-local COM)."""
         self.accounts = []
-        
+
         try:
-            accounts = self.namespace.Accounts
+            # Fresh connection so this works from any thread (init worker
+            # at startup, GUI thread when the Refresh button re-queries)
+            outlook = self._get_fresh_outlook()
+            accounts = outlook.GetNamespace("MAPI").Accounts
             for i in range(1, accounts.Count + 1):
                 account = accounts.Item(i)
                 self.accounts.append(OutlookAccount(
@@ -258,13 +261,18 @@ class OutlookSender:
         """
         if not self._initialized:
             return False, "Outlook not initialized"
-        
+
         try:
-            # Check offline status
-            if self.namespace.Offline:
+            # Fresh, thread-local COM connection: the objects stored by
+            # initialize() belong to the init worker thread's COM apartment
+            # and are dead once that thread exits ('Object is not connected
+            # to server' when reused from the GUI thread)
+            outlook = self._get_fresh_outlook()
+            namespace = outlook.GetNamespace("MAPI")
+            if namespace.Offline:
                 return False, "Outlook is in offline mode"
             return True, "Outlook is online"
-            
+
         except Exception as e:
             self.logger.error(f"Error checking online status: {e}")
             return False, f"Error checking status: {e}"

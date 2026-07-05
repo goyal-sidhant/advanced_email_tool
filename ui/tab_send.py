@@ -108,6 +108,12 @@ class OutlookInitWorker(QThread):
 
     def run(self):
         try:
+            import pythoncom
+            pythoncom.CoInitialize()
+        except Exception:
+            pass
+
+        try:
             ok, error = self.sender.initialize()
         except Exception as e:
             ok, error = False, str(e)
