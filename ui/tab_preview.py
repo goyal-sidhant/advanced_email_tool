@@ -186,10 +186,6 @@ class TabPreview(QWidget):
         
         self.validation_label = QLabel("")
         validation_layout.addWidget(self.validation_label, stretch=1)
-        
-        self.refresh_btn = QPushButton("Refresh Preview")
-        self.refresh_btn.clicked.connect(self.refresh_preview)
-        validation_layout.addWidget(self.refresh_btn)
 
         layout.addLayout(validation_layout)
 
@@ -228,6 +224,10 @@ class TabPreview(QWidget):
             name_column: Column containing name
             identifier_column: Column containing identifier
         """
+        # Remember which recipient was showing, so re-entering the tab
+        # doesn't dump the user back to recipient 1
+        previous_data_idx = self.recipient_combo.itemData(self._current_index)
+
         self._data = data
         self._selected_indices = selected_indices
         self._current_index = 0
@@ -245,16 +245,27 @@ class TabPreview(QWidget):
                 if col.lower() in ['name', 'client name', 'customer', 'party', 'party name']:
                     self._name_column = col
                     break
-        
+
         # Populate recipient dropdown
         self._refresh_recipient_list()
-        
+
+        # Restore position if the same recipient is still in the list
+        restore_index = 0
+        if previous_data_idx is not None:
+            for combo_idx in range(self.recipient_combo.count()):
+                if self.recipient_combo.itemData(combo_idx) == previous_data_idx:
+                    restore_index = combo_idx
+                    break
+
         # Update display
         if selected_indices:
-            self._show_preview(0)
+            self._show_preview(restore_index)
+            self.recipient_combo.blockSignals(True)
+            self.recipient_combo.setCurrentIndex(restore_index)
+            self.recipient_combo.blockSignals(False)
         else:
             self._clear_preview()
-        
+
         self._update_navigation()
     
     def _on_format_changed(self, index: int) -> None:
@@ -382,7 +393,7 @@ class TabPreview(QWidget):
             self.size_warning.setText("")
             return
         
-        total_size = 0
+        total_bytes = 0
         static_count = 0
         variable_count = 0
         
@@ -395,7 +406,9 @@ class TabPreview(QWidget):
             item = QListWidgetItem(f"{prefix} {filename}  ({size})")
             item.setToolTip(att.get('path', ''))
             self.attachment_list.addItem(item)
-            
+
+            total_bytes += att.get('size_bytes', 0) or 0
+
             if att_type == 'static':
                 static_count += 1
             else:
@@ -411,9 +424,18 @@ class TabPreview(QWidget):
         self.attachment_summary.setText(
             f"{len(attachments)} attachment(s): {', '.join(parts)}"
         )
-        
-        # Size warning would need actual size calculation
-        self.size_warning.setText("")
+
+        # Warn when this recipient's attachments exceed the size limit
+        import config
+        from utils import format_bytes
+        if total_bytes > config.MAX_ATTACHMENT_SIZE_BYTES:
+            self.size_warning.setText(
+                f"⚠ {format_bytes(total_bytes)} of attachments — exceeds the "
+                f"{config.MAX_ATTACHMENT_SIZE_MB} MB limit; this email may "
+                f"be rejected"
+            )
+        else:
+            self.size_warning.setText("")
     
     def _clear_preview(self) -> None:
         """Clear preview display."""

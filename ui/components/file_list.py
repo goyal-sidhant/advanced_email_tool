@@ -56,8 +56,11 @@ class FileListWidget(QWidget):
         self._files: List[str] = []
         self._show_size = show_size
         self._file_filter = file_filter
-        
+
         self._setup_ui(title, show_add_remove)
+
+        # Files can be dragged in from Explorer
+        self.setAcceptDrops(True)
     
     def _setup_ui(self, title: str, show_add_remove: bool) -> None:
         """Set up the user interface."""
@@ -123,15 +126,33 @@ class FileListWidget(QWidget):
     def _add_files(self) -> None:
         """Show file dialog to add files."""
         from ui.components.dialogs import show_files_dialog
-        
+
         files = show_files_dialog(
             self,
             title="Select Files to Add",
-            filter=self._file_filter
+            filter=self._file_filter,
+            remember_key="attachment_files"
         )
-        
+
         if files:
             self.add_files(files)
+
+    def dragEnterEvent(self, event) -> None:
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+
+    def dropEvent(self, event) -> None:
+        """Add dropped files to the list."""
+        import os
+
+        paths = [
+            url.toLocalFile()
+            for url in event.mimeData().urls()
+            if url.toLocalFile() and os.path.isfile(url.toLocalFile())
+        ]
+        if paths:
+            event.acceptProposedAction()
+            self.add_files(paths)
     
     def _remove_selected(self) -> None:
         """Remove selected files from list."""

@@ -104,27 +104,52 @@ def show_question_cancel(
         return None
 
 
+def _initial_dir(remember_key: Optional[str], directory: str) -> str:
+    """Starting directory for a dialog: explicit arg wins, else last-used."""
+    if directory:
+        return directory
+    if remember_key:
+        from utils.file_utils import load_preference
+        return load_preference(f'last_dir/{remember_key}', '') or ''
+    return ''
+
+
+def _remember_dir(remember_key: Optional[str], picked_path: str) -> None:
+    """Persist the directory of a successful pick for next time."""
+    if not remember_key or not picked_path:
+        return
+    import os
+    from utils.file_utils import save_preference
+    folder = picked_path if os.path.isdir(picked_path) else os.path.dirname(picked_path)
+    if folder:
+        save_preference(f'last_dir/{remember_key}', folder)
+
+
 def show_file_dialog(
     parent,
     title: str = "Select File",
     filter: str = "All Files (*.*)",
-    directory: str = ""
+    directory: str = "",
+    remember_key: Optional[str] = None
 ) -> Optional[str]:
     """
     Show a file open dialog.
-    
+
     Args:
         parent: Parent widget
         title: Dialog title
         filter: File type filter (e.g., "Excel Files (*.xlsx)")
         directory: Starting directory
-        
+        remember_key: Remember/reuse the last-used folder under this key
+
     Returns:
         Selected file path or None if cancelled
     """
     file_path, _ = QFileDialog.getOpenFileName(
-        parent, title, directory, filter
+        parent, title, _initial_dir(remember_key, directory), filter
     )
+    if file_path:
+        _remember_dir(remember_key, file_path)
     return file_path if file_path else None
 
 
@@ -132,45 +157,53 @@ def show_files_dialog(
     parent,
     title: str = "Select Files",
     filter: str = "All Files (*.*)",
-    directory: str = ""
+    directory: str = "",
+    remember_key: Optional[str] = None
 ) -> List[str]:
     """
     Show a multi-file open dialog.
-    
+
     Args:
         parent: Parent widget
         title: Dialog title
         filter: File type filter
         directory: Starting directory
-        
+        remember_key: Remember/reuse the last-used folder under this key
+
     Returns:
         List of selected file paths (empty if cancelled)
     """
     files, _ = QFileDialog.getOpenFileNames(
-        parent, title, directory, filter
+        parent, title, _initial_dir(remember_key, directory), filter
     )
+    if files:
+        _remember_dir(remember_key, files[0])
     return files if files else []
 
 
 def show_folder_dialog(
     parent,
     title: str = "Select Folder",
-    directory: str = ""
+    directory: str = "",
+    remember_key: Optional[str] = None
 ) -> Optional[str]:
     """
     Show a folder selection dialog.
-    
+
     Args:
         parent: Parent widget
         title: Dialog title
         directory: Starting directory
-        
+        remember_key: Remember/reuse the last-used folder under this key
+
     Returns:
         Selected folder path or None if cancelled
     """
     folder_path = QFileDialog.getExistingDirectory(
-        parent, title, directory
+        parent, title, _initial_dir(remember_key, directory)
     )
+    if folder_path:
+        _remember_dir(remember_key, folder_path)
     return folder_path if folder_path else None
 
 
@@ -179,28 +212,33 @@ def show_save_dialog(
     title: str = "Save File",
     filter: str = "All Files (*.*)",
     directory: str = "",
-    default_name: str = ""
+    default_name: str = "",
+    remember_key: Optional[str] = None
 ) -> Optional[str]:
     """
     Show a file save dialog.
-    
+
     Args:
         parent: Parent widget
         title: Dialog title
         filter: File type filter
         directory: Starting directory
         default_name: Default filename
-        
+        remember_key: Remember/reuse the last-used folder under this key
+
     Returns:
         Selected save path or None if cancelled
     """
+    directory = _initial_dir(remember_key, directory)
     if default_name:
         import os
         directory = os.path.join(directory, default_name)
-    
+
     file_path, _ = QFileDialog.getSaveFileName(
         parent, title, directory, filter
     )
+    if file_path:
+        _remember_dir(remember_key, file_path)
     return file_path if file_path else None
 
 

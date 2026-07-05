@@ -5,7 +5,7 @@ Desktop application for bulk personalized email sending.
 Matches client-specific attachments using identifier patterns.
 
 Author: Sidhant
-Version: 1.4.0
+Version: see config.APP_VERSION
 """
 
 import sys

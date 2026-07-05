@@ -29,6 +29,33 @@ def write_json_atomic(path, data, **json_kwargs) -> None:
     os.replace(tmp_path, path)
 
 
+def load_preference(key: str, default=None):
+    """Read one value from the shared preferences.json."""
+    import json
+    try:
+        with open(config.PREFERENCES_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f).get(key, default)
+    except Exception:
+        return default
+
+
+def save_preference(key: str, value) -> None:
+    """Write one value to the shared preferences.json (merging existing keys)."""
+    prefs = {}
+    try:
+        import json
+        with open(config.PREFERENCES_FILE, 'r', encoding='utf-8') as f:
+            prefs = json.load(f)
+    except Exception:
+        pass
+
+    prefs[key] = value
+    try:
+        write_json_atomic(config.PREFERENCES_FILE, prefs, indent=2)
+    except Exception:
+        pass  # preferences are best-effort
+
+
 def ensure_extended_path(path: str) -> str:
     """
     Convert a path to extended-length path format for Windows.

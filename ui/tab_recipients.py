@@ -178,6 +178,12 @@ class TabRecipients(QWidget):
             str(row.get(self._email_column, '') or '')
             for row in self.recipient_list.get_all_data()
         ]
+
+    def _status_message(self, message: str) -> None:
+        """Show a transient message in the main window's status bar."""
+        status_bar = getattr(self.window(), 'status_bar', None)
+        if status_bar is not None:
+            status_bar.showMessage(message, 4000)
     
     def _save_list(self) -> None:
         """Save current selection as a list."""
@@ -219,7 +225,7 @@ class TabRecipients(QWidget):
 
             if success:
                 self._refresh_lists()
-                show_info(self, "Saved", f"List '{name}' saved with {len(selected)} recipients.")
+                self._status_message(f"List '{name}' saved with {len(selected)} recipients")
             else:
                 show_error(self, "Error", msg)
     
@@ -243,7 +249,7 @@ class TabRecipients(QWidget):
             if success:
                 self._refresh_lists()
                 self.lists_combo.setCurrentIndex(0)
-                show_info(self, "Deleted", f"List '{name}' deleted.")
+                self._status_message(f"List '{name}' deleted")
             else:
                 show_error(self, "Error", msg)
     

@@ -90,7 +90,7 @@ Files match if identifier appears **anywhere in filename**.
 | `PAN001` | `PAN001_report.pdf` | `pan001_report.pdf` |
 | `ABC` | `ABC_form.xlsx` | `abc_form.xlsx` |
 
-**Case-sensitive!**
+**Matching is case-insensitive.**
 
 ### Two Identifiers
 
@@ -104,7 +104,7 @@ Files match if identifier appears **anywhere in filename**.
 | Problem | Solution |
 |---------|----------|
 | "Outlook not available" | Open Outlook desktop app first |
-| Variables not replaced | Check exact column name (case-sensitive) |
+| Variables not replaced | Check exact column name (case-insensitive) |
 | Files not matching | Check case, use Test Matching feature |
 | Special chars not working | Avoid `:` and `;` in column names |
 

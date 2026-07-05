@@ -202,7 +202,7 @@ class TabCompose(QWidget):
             self.subject_input.setText(template.get('subject', ''))
             self.body_editor.set_html(template.get('body', ''))
             self.logger.info(f"Template loaded: {name}")
-            show_info(self, "Template Loaded", f"Template '{name}' loaded successfully.")
+            self._status_message(f"Template '{name}' loaded")
         else:
             show_error(self, "Error", f"Could not load template '{name}'.")
     
@@ -220,7 +220,7 @@ class TabCompose(QWidget):
         )
         
         if success:
-            show_info(self, "Saved", f"Template '{name}' saved.")
+            self._status_message(f"Template '{name}' saved")
         else:
             show_error(self, "Error", msg)
     
@@ -253,7 +253,7 @@ class TabCompose(QWidget):
             if success:
                 self._refresh_template_list()
                 self.template_combo.setCurrentText(name)
-                show_info(self, "Saved", f"Template saved as '{name}'.")
+                self._status_message(f"Template saved as '{name}'")
             else:
                 show_error(self, "Error", msg)
     
@@ -275,10 +275,16 @@ class TabCompose(QWidget):
             if success:
                 self._refresh_template_list()
                 self.template_combo.setCurrentIndex(0)
-                show_info(self, "Deleted", f"Template '{name}' deleted.")
+                self._status_message(f"Template '{name}' deleted")
             else:
                 show_error(self, "Error", msg)
     
+    def _status_message(self, message: str) -> None:
+        """Show a transient message in the main window's status bar."""
+        status_bar = getattr(self.window(), 'status_bar', None)
+        if status_bar is not None:
+            status_bar.showMessage(message, 4000)
+
     def _clear_content(self) -> None:
         """Clear subject and body."""
         self.subject_input.clear()
@@ -362,6 +368,18 @@ class TabCompose(QWidget):
         for col in columns:
             self.subject_var_combo.addItem(col)
 
+        # Make it obvious why variables are unavailable before Excel loads
+        has_columns = bool(columns)
+        self.subject_var_combo.setEnabled(has_columns)
+        self.subject_insert_btn.setEnabled(has_columns)
+        if not has_columns:
+            hint = "Load an Excel file (tab 1) to get columns for variables"
+            self.subject_var_combo.setToolTip(hint)
+            self.subject_insert_btn.setToolTip(hint)
+        else:
+            self.subject_var_combo.setToolTip("Select a column to insert as variable")
+            self.subject_insert_btn.setToolTip("Insert selected variable at cursor")
+
         # Update subject autocomplete
         self._subject_completer.set_variables(columns)
 
@@ -427,15 +445,15 @@ class TabCompose(QWidget):
     
     def _import_file(self) -> None:
         """Import content from Word (.docx) or Text (.txt) file."""
-        from PyQt5.QtWidgets import QFileDialog
-        
-        file_path, _ = QFileDialog.getOpenFileName(
+        from ui.components.dialogs import show_file_dialog
+
+        file_path = show_file_dialog(
             self,
-            "Import File",
-            "",
-            "Supported Files (*.docx *.txt *.html *.htm);;Word Documents (*.docx);;Text Files (*.txt);;HTML Files (*.html *.htm);;All Files (*.*)"
+            title="Import File",
+            filter="Supported Files (*.docx *.txt *.html *.htm);;Word Documents (*.docx);;Text Files (*.txt);;HTML Files (*.html *.htm);;All Files (*.*)",
+            remember_key="compose_import"
         )
-        
+
         if not file_path:
             return
         
@@ -475,7 +493,7 @@ class TabCompose(QWidget):
                 
                 if reply != QMessageBox.Cancel:
                     self.logger.info(f"Imported content from: {file_path}")
-                    show_info(self, "Imported", "Content imported successfully.")
+                    self._status_message("Content imported")
             
         except Exception as e:
             show_error(self, "Import Error", f"Could not import file:\n{e}")

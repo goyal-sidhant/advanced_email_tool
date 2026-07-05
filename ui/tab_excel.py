@@ -87,6 +87,31 @@ class TabExcel(QWidget):
 
         self._setup_ui()
 
+        # Drop an .xlsx/.xlsm anywhere on the tab to load it
+        self.setAcceptDrops(True)
+
+    def dragEnterEvent(self, event) -> None:
+        if self._dropped_excel_path(event) is not None:
+            event.acceptProposedAction()
+
+    def dropEvent(self, event) -> None:
+        path = self._dropped_excel_path(event)
+        if path is not None:
+            event.acceptProposedAction()
+            self._load_file(path)
+
+    @staticmethod
+    def _dropped_excel_path(event) -> Optional[str]:
+        """Return the dropped Excel file path, or None if not applicable."""
+        mime = event.mimeData()
+        if not mime.hasUrls():
+            return None
+        for url in mime.urls():
+            path = url.toLocalFile()
+            if path.lower().endswith(('.xlsx', '.xlsm')):
+                return path
+        return None
+
     def _find_column(self, column_name: str) -> Optional[str]:
         """Find actual column name using case-insensitive match."""
         if not column_name:
@@ -344,7 +369,8 @@ class TabExcel(QWidget):
         file_path = show_file_dialog(
             self,
             title="Select Excel File",
-            filter=config.EXCEL_FILTER
+            filter=config.EXCEL_FILTER,
+            remember_key="excel"
         )
         
         if file_path:
@@ -563,31 +589,43 @@ class TabExcel(QWidget):
             invalid_bg = QBrush(QColor("#FFEBEE"))  # Light red
             invalid_fg = QColor("#DC3545")  # Red text
         
-        # Track invalid count
-        invalid_count = 0
-        
-        # Populate cells
+        # Populate cells (highlighting only covers the visible preview rows)
         for row_idx, row_data in enumerate(preview_data):
             for col_idx, col_name in enumerate(self._columns):
                 value = str(row_data.get(col_name, ""))
                 item = QTableWidgetItem(value)
                 item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-                
+
                 # Validate email column
                 if col_idx == email_col_idx and value.strip():
                     if not is_valid_email(value.strip()):
                         item.setBackground(invalid_bg)
                         item.setForeground(invalid_fg)
                         item.setToolTip("Invalid email format")
-                        invalid_count += 1
-                
+
                 self.preview_table.setItem(row_idx, col_idx, item)
-        
+
         # Resize columns to content
         self.preview_table.resizeColumnsToContents()
-        
-        # Update validation status
-        self._update_validation_status(len(preview_data), invalid_count)
+
+        # Validate over ALL rows — an invalid email at row 300 must not hide
+        # behind a preview capped at 100 rows
+        invalid_count = 0
+        if actual_email_col:
+            for row_data in self._data:
+                value = str(row_data.get(actual_email_col, "")).strip()
+                if value and not is_valid_email(value):
+                    invalid_count += 1
+
+        self._update_validation_status(len(self._data), invalid_count)
+
+        # Make preview truncation visible
+        if len(self._data) > max_rows:
+            self.preview_count_label.setText(
+                f"Showing first {max_rows} of {len(self._data)} rows"
+            )
+        else:
+            self.preview_count_label.setText("")
     
     def _update_validation_status(self, total: int, invalid: int) -> None:
         """Update the validation status label."""

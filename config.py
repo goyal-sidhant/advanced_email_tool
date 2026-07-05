@@ -11,7 +11,7 @@ from pathlib import Path
 # APPLICATION INFO
 # =============================================================================
 APP_NAME = "Advanced Email Tool"
-APP_VERSION = "1.6.0"
+APP_VERSION = "1.8.0"
 APP_AUTHOR = "Sidhant"
 
 # =============================================================================

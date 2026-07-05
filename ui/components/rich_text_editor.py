@@ -636,13 +636,15 @@ class RichTextEditor(QWidget):
     
     def _insert_image_from_file(self) -> None:
         """Insert image from file picker."""
-        file_path, _ = QFileDialog.getOpenFileName(
+        from ui.components.dialogs import show_file_dialog
+
+        file_path = show_file_dialog(
             self,
-            "Select Image",
-            "",
-            "Images (*.png *.jpg *.jpeg *.gif *.bmp);;All Files (*.*)"
+            title="Select Image",
+            filter="Images (*.png *.jpg *.jpeg *.gif *.bmp);;All Files (*.*)",
+            remember_key="compose_image"
         )
-        
+
         if file_path:
             self._insert_image(file_path)
     

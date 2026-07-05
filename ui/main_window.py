@@ -68,6 +68,18 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"{config.APP_NAME} v{config.APP_VERSION}")
         self.setMinimumSize(config.WINDOW_MIN_WIDTH, config.WINDOW_MIN_HEIGHT)
         self.resize(config.WINDOW_DEFAULT_WIDTH, config.WINDOW_DEFAULT_HEIGHT)
+
+        # Restore last window geometry (size, position, maximized state)
+        from utils.file_utils import load_preference
+        saved_geometry = load_preference('window_geometry')
+        if saved_geometry:
+            try:
+                from PyQt5.QtCore import QByteArray
+                self.restoreGeometry(
+                    QByteArray.fromBase64(saved_geometry.encode('ascii'))
+                )
+            except Exception:
+                pass
     
     def _setup_menu(self) -> None:
         """Set up menu bar."""
@@ -192,14 +204,37 @@ class MainWindow(QMainWindow):
         self.tab_send = TabSend()
         
         # Add tabs with icons/numbers
-        self.tab_widget.addTab(self.tab_excel, "1. Excel")
-        self.tab_widget.addTab(self.tab_compose, "2. Compose")
-        self.tab_widget.addTab(self.tab_attachments, "3. Attachments")
-        self.tab_widget.addTab(self.tab_recipients, "4. Recipients")
-        self.tab_widget.addTab(self.tab_preview, "5. Preview")
-        self.tab_widget.addTab(self.tab_send, "6. Send")
-        
+        self._tab_titles = [
+            "1. Excel", "2. Compose", "3. Attachments",
+            "4. Recipients", "5. Preview", "6. Send",
+        ]
+        self.tab_widget.addTab(self.tab_excel, self._tab_titles[0])
+        self.tab_widget.addTab(self.tab_compose, self._tab_titles[1])
+        self.tab_widget.addTab(self.tab_attachments, self._tab_titles[2])
+        self.tab_widget.addTab(self.tab_recipients, self._tab_titles[3])
+        self.tab_widget.addTab(self.tab_preview, self._tab_titles[4])
+        self.tab_widget.addTab(self.tab_send, self._tab_titles[5])
+
         layout.addWidget(self.tab_widget)
+
+    def _update_step_indicators(self) -> None:
+        """Mark completed steps with a checkmark in the tab titles."""
+        import re
+
+        body_text = re.sub(r'<[^>]+>', '',
+                           self.tab_compose.get_body_template()).replace('&nbsp;', '')
+        done = {
+            0: self.tab_excel.is_data_loaded(),
+            1: bool(self.tab_compose.get_subject_template().strip()
+                    or body_text.strip()),
+            2: bool(self.tab_attachments.get_static_attachments()
+                    or self.tab_attachments.get_attachment_folder()),
+            3: self.tab_recipients.get_selected_count() > 0,
+        }
+
+        for index, title in enumerate(self._tab_titles):
+            suffix = " ✓" if done.get(index) else ""
+            self.tab_widget.setTabText(index, title + suffix)
     
     def _setup_status_bar(self) -> None:
         """Set up status bar."""
@@ -310,6 +345,7 @@ class MainWindow(QMainWindow):
         
         # Update status
         self.status_bar.showMessage(f"Loaded {len(data)} rows from Excel")
+        self._update_step_indicators()
     
     def _on_mapping_changed(self, mapping: dict) -> None:
         """Handle column mapping changes."""
@@ -365,6 +401,7 @@ class MainWindow(QMainWindow):
         # emails are actually built — doing it here would re-serialize and
         # regex-scan the whole document (megabytes with pasted images) on
         # every keystroke
+        self._update_step_indicators()
     
     def _on_attachments_changed(self) -> None:
         """Handle attachment configuration changes."""
@@ -379,10 +416,12 @@ class MainWindow(QMainWindow):
             self.tab_attachments.is_static_enabled(),
             self.tab_attachments.is_dynamic_enabled()
         )
-    
+        self._update_step_indicators()
+
     def _on_selection_changed(self, count: int) -> None:
         """Handle recipient selection changes."""
         self.status_bar.showMessage(f"{count} recipients selected")
+        self._update_step_indicators()
     
     def _on_tab_changed(self, index: int) -> None:
         """Handle tab changes."""
@@ -596,14 +635,14 @@ class MainWindow(QMainWindow):
             self.tab_recipients.clear()
 
             self.tab_widget.setCurrentIndex(0)
+            self._update_step_indicators()
             self.status_bar.showMessage("New session started")
-    
+
     def _save_session(self) -> None:
         """Manually save session."""
         state = self._get_session_state()
         if self.session_manager.save_session(state):
-            self.status_bar.showMessage("Session saved")
-            show_info(self, "Saved", "Session saved successfully.")
+            self.status_bar.showMessage("Session saved", 4000)
         else:
             show_warning(self, "Warning", "Could not save session.")
     
@@ -638,6 +677,13 @@ class MainWindow(QMainWindow):
         # Save session
         self.auto_save_manager.save_now()
         self.auto_save_manager.stop()
+
+        # Remember window geometry for next launch
+        from utils.file_utils import save_preference
+        save_preference(
+            'window_geometry',
+            bytes(self.saveGeometry().toBase64()).decode('ascii')
+        )
 
         self.logger.info("Application closing")
         event.accept()

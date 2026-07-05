@@ -389,11 +389,13 @@ class AttachmentMatcher:
         # Add summary
         stats = self.get_match_statistics(identifiers)
         report['summary'] = stats
-        
-        # Optionally save to Excel
+
+        # Optionally save to Excel; record whether the save worked so the
+        # UI never claims success for a failed write (file open in Excel)
+        report['saved'] = True
         if output_path:
-            self._save_report_to_excel(report, output_path)
-        
+            report['saved'] = self._save_report_to_excel(report, output_path)
+
         return report
     
     def _save_report_to_excel(self, report: Dict, output_path: str) -> bool:

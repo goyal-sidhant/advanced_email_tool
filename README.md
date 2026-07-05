@@ -68,7 +68,7 @@ python main.py
 - **Variable**: 
   - Select folder containing client files
   - Scan folder to index files
-  - Files matched by identifier in filename (substring match)
+  - Files matched by identifier in filename (substring match, case-insensitive)
   - Use 2 identifiers with AND/OR logic
 
 #### 4. Recipients Tab
@@ -112,12 +112,12 @@ Template variables support special characters:
 ## Identifier Matching
 
 ### Single Identifier
-Files are matched if the identifier appears anywhere in the filename.
+Files are matched if the identifier appears anywhere in the filename (case-insensitive).
 
 Example: Identifier = `PAN001`
 - ✅ `PAN001_report.pdf`
 - ✅ `2024_PAN001_final.xlsx`
-- ❌ `pan001_report.pdf` (case-sensitive!)
+- ✅ `pan001_report.pdf` (matching is case-insensitive)
 
 ### Multiple Identifiers (OR Logic)
 File matches if it contains **either** identifier.
@@ -204,7 +204,7 @@ advanced_email_tool/
 - Avoid `:` and `;` in column names (reserved for CSS)
 
 ### Files not matching
-- Matching is case-sensitive
+- Matching is case-insensitive substring matching
 - Check identifier exists in filename (not just folder name)
 - Use "Test Matching" feature in Attachments tab
 

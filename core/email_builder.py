@@ -408,11 +408,13 @@ class EmailBuilder:
         if self.enable_static_attachments:
             for path in self.static_attachments:
                 from utils import get_file_size_formatted
+                from utils.file_utils import get_file_size
                 attachment_info.append({
                     'type': 'static',
                     'path': path,
                     'filename': os.path.basename(path) if path else "",
                     'size': get_file_size_formatted(path),
+                    'size_bytes': get_file_size(path),
                 })
 
         # Variable attachments if enabled
@@ -444,6 +446,7 @@ class EmailBuilder:
                         'path': full_path,
                         'filename': filename,
                         'size': format_bytes(size),
+                        'size_bytes': size,
                     })
         
         return {

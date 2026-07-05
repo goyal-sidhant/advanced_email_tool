@@ -122,7 +122,7 @@ class TabAttachments(QWidget):
         
         variable_info = QLabel(
             "Files matched using the Identifier column from Excel.\n"
-            "Exact substring match in filename (case-sensitive)."
+            "Substring match in filename (case-insensitive)."
         )
         variable_info.setStyleSheet("color: gray; font-size: 10px;")
         variable_layout.addWidget(variable_info)
@@ -223,9 +223,10 @@ class TabAttachments(QWidget):
         test_input_layout = QHBoxLayout()
         
         self.test_input = QLineEdit()
-        self.test_input.setPlaceholderText("Enter identifier to test...")
+        self.test_input.setPlaceholderText("Enter identifier to test (press Enter)...")
+        self.test_input.returnPressed.connect(self._test_matching)
         test_input_layout.addWidget(self.test_input)
-        
+
         self.test_btn = QPushButton("Test")
         self.test_btn.clicked.connect(self._test_matching)
         test_input_layout.addWidget(self.test_btn)
@@ -257,7 +258,9 @@ class TabAttachments(QWidget):
 
     def _browse_folder(self) -> None:
         """Open folder selection dialog and auto-scan."""
-        folder = show_folder_dialog(self, "Select Attachments Folder")
+        folder = show_folder_dialog(
+            self, "Select Attachments Folder", remember_key="attachments_folder"
+        )
 
         if folder:
             self.folder_input.setText(folder)
@@ -370,25 +373,21 @@ class TabAttachments(QWidget):
         )
     
     def _test_matching(self) -> None:
-        """Test matching for entered identifier."""
+        """Test matching for the entered identifier — all feedback inline."""
         identifier = self.test_input.text().strip()
         if not identifier:
-            show_error(self, "Error", "Please enter an identifier to test.")
+            self.matched_files_list.set_title("Enter an identifier to test")
             return
-        
+
         if not self.attachment_matcher.total_files:
-            show_error(self, "Error", "Please scan a folder first.")
+            self.matched_files_list.set_title("Scan a folder first (Browse… above)")
             return
-        
+
         matches = self.attachment_matcher.match_identifier(identifier)
         self.matched_files_list.set_matched_files(matches, identifier)
-        
+
         if not matches:
-            show_info(
-                self,
-                "No Matches",
-                f"No files found containing '{identifier}' in filename."
-            )
+            self.matched_files_list.set_title(f'No files match "{identifier}"')
     
     def _generate_report(self) -> None:
         """Generate and save match report."""
@@ -400,7 +399,8 @@ class TabAttachments(QWidget):
             self,
             "Save Match Report",
             "Excel Files (*.xlsx)",
-            default_name="match_report.xlsx"
+            default_name="match_report.xlsx",
+            remember_key="match_report"
         )
         
         if save_path:
@@ -408,7 +408,15 @@ class TabAttachments(QWidget):
                 self._identifiers,
                 save_path
             )
-            show_info(self, "Report Generated", f"Match report saved to:\n{save_path}")
+            if report.get('saved', True):
+                show_info(self, "Report Generated", f"Match report saved to:\n{save_path}")
+            else:
+                show_error(
+                    self,
+                    "Report Not Saved",
+                    "Could not save the report.\n\n"
+                    "If the file is open in Excel, close it and try again."
+                )
     
     def _on_attachments_changed(self) -> None:
         """Handle attachment configuration changes."""
