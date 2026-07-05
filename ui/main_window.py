@@ -54,9 +54,14 @@ class MainWindow(QMainWindow):
         self._setup_shortcuts()
         self._connect_signals()
         self._setup_auto_save()
-        
-        # Check for saved session
-        self._check_restore_session()
+
+    def start_background_init(self) -> None:
+        """
+        Kick off deferred startup work — called by main.py right after
+        show(), so the window paints before any slow work begins.
+        """
+        QTimer.singleShot(0, self.tab_send.start_outlook_init)
+        QTimer.singleShot(0, self._check_restore_session)
     
     def _setup_window(self) -> None:
         """Configure main window properties."""

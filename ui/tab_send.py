@@ -15,7 +15,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QThread, pyqtSlot
 from ui.components.progress_log import ProgressLog
 from ui.components.dialogs import show_error, show_info, show_warning, show_question
 from ui.components.tab_navigation import TabNavigationBar
-from core.outlook_sender import OutlookSender
+from core.outlook_sender import OutlookSender, detect_new_outlook
 from core.email_builder import EmailBuilder, Email
 from data.checkpoint import CheckpointManager
 from utils import get_logger
@@ -78,6 +78,31 @@ class SendWorker(QThread):
         self._cancelled = True
 
 
+class OutlookInitWorker(QThread):
+    """Connects to Outlook off the UI thread so startup never freezes."""
+
+    done = pyqtSignal(bool, str, bool)  # success, error, new_outlook_detected
+
+    def __init__(self, sender: OutlookSender):
+        super().__init__()
+        self.sender = sender
+
+    def run(self):
+        try:
+            ok, error = self.sender.initialize()
+        except Exception as e:
+            ok, error = False, str(e)
+
+        new_outlook = False
+        if not ok:
+            try:
+                new_outlook = detect_new_outlook()
+            except Exception:
+                pass
+
+        self.done.emit(ok, error, new_outlook)
+
+
 class TestSendWorker(QThread):
     """Background worker for the single test email — keeps the UI responsive."""
 
@@ -127,10 +152,16 @@ class TabSend(QWidget):
         self._email_builder: Optional[EmailBuilder] = None
         self._emails: List[Email] = []
         self._send_worker: Optional[SendWorker] = None
+        self._init_worker: Optional[OutlookInitWorker] = None
         self._is_sending = False
-        
+
         self._setup_ui()
-        self._initialize_outlook()
+
+        # Outlook connection is deferred: main.py calls start_outlook_init()
+        # after the window is shown, so startup never blocks on COM
+        self.start_btn.setEnabled(False)
+        self.online_label.setText("Not connected")
+        self.online_label.setStyleSheet("color: gray;")
     
     def _setup_ui(self) -> None:
         """Set up the user interface."""
@@ -305,31 +336,68 @@ class TabSend(QWidget):
         self.nav_bar.previous_clicked.connect(self.navigate_previous.emit)
         layout.addWidget(self.nav_bar)
 
-    def _initialize_outlook(self) -> None:
-        """Initialize Outlook connection."""
-        success, error = self.outlook_sender.initialize()
-        
+    def start_outlook_init(self) -> None:
+        """Connect to Outlook in a worker thread (called after window show)."""
+        if self.outlook_sender.is_initialized():
+            return
+        if self._init_worker and self._init_worker.isRunning():
+            return
+
+        self.online_label.setText("⏳ Connecting to Outlook…")
+        self.online_label.setStyleSheet("color: gray;")
+        self.start_btn.setEnabled(False)
+
+        self._init_worker = OutlookInitWorker(self.outlook_sender)
+        self._init_worker.done.connect(self._on_outlook_init_done)
+        self._init_worker.start()
+
+    @pyqtSlot(bool, str, bool)
+    def _on_outlook_init_done(self, success: bool, error: str, new_outlook: bool) -> None:
+        """Handle Outlook connection result on the UI thread."""
         if success:
-            self._refresh_accounts()
+            self._populate_accounts()
             self._update_online_status()
+            self.start_btn.setEnabled(True)
             self.progress_log.log_success("Outlook connected")
         else:
             self.progress_log.log_error(f"Outlook not available: {error}")
             self.start_btn.setEnabled(False)
-            self.online_label.setText("⚠ Outlook not available")
+            self.online_label.setText("⚠ Outlook not available — click Refresh to retry")
             self.online_label.setStyleSheet("color: #dc3545;")
-    
+
+            if new_outlook:
+                show_warning(
+                    self,
+                    "New Outlook Detected",
+                    "This app requires Outlook Classic — New Outlook cannot "
+                    "be automated.\n\n"
+                    "To switch back:\n"
+                    "1. Open Outlook\n"
+                    "2. Go to Settings (gear icon)\n"
+                    "3. Toggle OFF 'New Outlook'\n\n"
+                    "Then click Refresh on the Send tab to reconnect."
+                )
+
     def _refresh_accounts(self) -> None:
-        """Refresh Outlook accounts list."""
+        """Refresh accounts — doubles as reconnect if Outlook wasn't available."""
+        if not self.outlook_sender.is_initialized():
+            self.start_outlook_init()
+            return
+
+        self.outlook_sender.refresh_accounts()
+        self._populate_accounts()
+
+    def _populate_accounts(self) -> None:
+        """Fill the account dropdown from the sender's account list."""
         self.account_combo.clear()
-        
+
         accounts = self.outlook_sender.get_accounts()
         for account in accounts:
             self.account_combo.addItem(
                 f"{account.email} ({account.name})",
                 account.email
             )
-        
+
         if not accounts:
             self.account_combo.addItem("No accounts found")
     

@@ -6,6 +6,7 @@ Supports multiple accounts, offline detection, and preview display.
 """
 
 import os
+import sys
 import time
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
@@ -14,6 +15,38 @@ from utils import get_logger
 from core.email_builder import Email
 
 import config
+
+
+def detect_new_outlook() -> bool:
+    """
+    Check whether the user is on "New Outlook" (olk.exe), which has no
+    COM automation support. Cheap checks only — no COM dispatch.
+    """
+    if sys.platform != 'win32':
+        return False
+
+    try:
+        import subprocess
+        result = subprocess.run(
+            ['tasklist', '/FI', 'IMAGENAME eq olk.exe'],
+            capture_output=True, text=True, timeout=5
+        )
+        if 'olk.exe' in result.stdout:
+            return True
+    except Exception:
+        pass
+
+    try:
+        import winreg
+        key = winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Software\Microsoft\Office\16.0\Outlook\Preferences"
+        )
+        value, _ = winreg.QueryValueEx(key, "UseNewOutlook")
+        winreg.CloseKey(key)
+        return value == 1
+    except Exception:
+        return False
 
 
 @dataclass
@@ -127,11 +160,29 @@ class OutlookSender:
     def get_accounts(self) -> List[OutlookAccount]:
         """
         Get list of available Outlook accounts.
-        
+
         Returns:
             List of OutlookAccount objects
         """
         return self.accounts.copy()
+
+    def is_initialized(self) -> bool:
+        """Check whether the Outlook connection has been established."""
+        return self._initialized
+
+    def refresh_accounts(self) -> List[OutlookAccount]:
+        """
+        Re-query accounts from Outlook (picks up accounts added after init).
+
+        Returns:
+            Fresh list of OutlookAccount objects
+        """
+        if self._initialized:
+            try:
+                self._load_accounts()
+            except Exception as e:
+                self.logger.error(f"Error refreshing accounts: {e}")
+        return self.get_accounts()
     
     def select_account(self, email: str) -> bool:
         """
