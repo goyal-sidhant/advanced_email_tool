@@ -79,8 +79,9 @@ class AttachmentMatcher:
         self.logger.info(f"Scanning directory: {self.directory}")
         
         self.file_index = []
+        self.matches = {}  # results cached from a previous scan are stale now
         self.total_size = 0
-        
+
         try:
             for full_path, filename, size in scan_directory(
                 self.directory, 

@@ -276,6 +276,13 @@ class TabCompose(QWidget):
         """Clear subject and body."""
         self.subject_input.clear()
         self.body_editor.clear()
+
+    def reset(self) -> None:
+        """Clear all compose state (New Session)."""
+        self._clear_content()
+        self.universal_bcc_input.clear()
+        self.template_combo.setCurrentIndex(0)
+        self.set_available_columns([])
     
     def _insert_subject_variable(self) -> None:
         """Insert selected variable into subject line."""

@@ -78,6 +78,26 @@ class SendWorker(QThread):
         self._cancelled = True
 
 
+class TestSendWorker(QThread):
+    """Background worker for the single test email — keeps the UI responsive."""
+
+    finished_with_result = pyqtSignal(bool, str, str)  # success, message, recipient
+
+    def __init__(self, sender: OutlookSender, email: Email):
+        super().__init__()
+        self.sender = sender
+        self.email = email
+
+    def run(self):
+        try:
+            success, message = self.sender.send_email(self.email)
+        except Exception as e:
+            success, message = False, str(e)
+
+        recipient = self.email.to[0] if self.email.to else ""
+        self.finished_with_result.emit(success, message, recipient)
+
+
 class TabSend(QWidget):
     """
     Email sending tab.
@@ -402,15 +422,21 @@ class TabSend(QWidget):
         if not self._emails:
             show_error(self, "Error", "No emails to test.")
             return
-        
+
+        # Apply the account chosen in the dropdown — the test must verify
+        # the same sender identity the real send will use
+        account_email = self.account_combo.currentData()
+        if account_email:
+            self.outlook_sender.select_account(account_email)
+
         # Get the logged-in user's email
         account = self.outlook_sender.get_selected_account()
         if not account:
             show_error(self, "Error", "No Outlook account selected.")
             return
-        
+
         my_email = account.email
-        
+
         # Confirm
         reply = QMessageBox.question(
             self,
@@ -421,10 +447,10 @@ class TabSend(QWidget):
             f"Continue?",
             QMessageBox.Yes | QMessageBox.No
         )
-        
+
         if reply != QMessageBox.Yes:
             return
-        
+
         # Create test email (copy of first email, sent to self)
         from copy import deepcopy
         test_email = deepcopy(self._emails[0])
@@ -432,14 +458,26 @@ class TabSend(QWidget):
         test_email.cc = []
         test_email.bcc = []
         test_email.subject = f"[TEST] {test_email.subject}"
-        
-        # Send
-        success, message = self.outlook_sender.send_email(test_email)
-        
+
+        # Send in the background so the window stays responsive
+        self.test_btn.setEnabled(False)
+        self.status_label.setText("Sending test email...")
+
+        self._test_worker = TestSendWorker(self.outlook_sender, test_email)
+        self._test_worker.finished_with_result.connect(self._on_test_send_done)
+        self._test_worker.start()
+
+    @pyqtSlot(bool, str, str)
+    def _on_test_send_done(self, success: bool, message: str, recipient: str) -> None:
+        """Handle test send completion."""
+        self.test_btn.setEnabled(True)
+        self.status_label.setText(f"Ready: {len(self._emails)} emails to send")
+
         if success:
-            show_info(self, "Test Sent", f"Test email sent to {my_email}\n\nCheck your inbox!")
-            self.progress_log.log_success(f"Test email sent to {my_email}")
+            show_info(self, "Test Sent", f"Test email sent to {recipient}\n\nCheck your inbox!")
+            self.progress_log.log_success(f"Test email sent to {recipient}")
         else:
+            self.progress_log.log_error(f"Test email failed: {message}")
             show_error(self, "Test Failed", f"Could not send test email:\n{message}")
     
     def _start_sending(self) -> None:
@@ -466,13 +504,20 @@ class TabSend(QWidget):
         account_email = self.account_combo.currentData()
         if account_email:
             self.outlook_sender.select_account(account_email)
-        
-        # Start checkpoint
+
+        # Start checkpoint with the actual row indexes being sent, so a
+        # resume matches emails by row even when a subset was selected
         self.checkpoint_manager.start_session(
-            len(self._emails),
+            [e.row_index for e in self._emails],
             sending_account=account_email or ""
         )
-        
+
+        self._launch_send(self._emails)
+
+    def _launch_send(self, emails: List[Email]) -> None:
+        """Start the send worker for the given emails (checkpoint already set up)."""
+        preview_mode = self.preview_check.isChecked()
+
         # Update UI
         self._is_sending = True
         self.start_btn.setEnabled(False)
@@ -480,19 +525,19 @@ class TabSend(QWidget):
         self.account_combo.setEnabled(False)
         self.interval_spin.setEnabled(False)
         self.preview_check.setEnabled(False)
-        
+
         self.progress_log.clear()
         self.progress_log.start_operation(
             f"{'Displaying' if preview_mode else 'Sending'} emails",
-            len(self._emails)
+            len(emails)
         )
-        
+
         self.send_started.emit()
-        
+
         # Start worker
         self._send_worker = SendWorker(
             self.outlook_sender,
-            self._emails,
+            emails,
             self.checkpoint_manager,
             self.interval_spin.value(),
             preview_mode
@@ -501,7 +546,7 @@ class TabSend(QWidget):
         self._send_worker.finished.connect(self._on_finished)
         self._send_worker.error.connect(self._on_error)
         self._send_worker.start()
-    
+
     def _cancel_sending(self) -> None:
         """Cancel the send operation."""
         if self._send_worker:
@@ -517,18 +562,35 @@ class TabSend(QWidget):
                 self.progress_log.log_warning("Cancelling... (waiting for current email)")
     
     def _resume_sending(self) -> None:
-        """Resume an incomplete session."""
+        """Resume an incomplete session, continuing its existing checkpoint."""
         success, msg, remaining = self.checkpoint_manager.resume_session()
-        
-        if success:
-            # Filter emails to only remaining ones
-            remaining_set = set(remaining)
-            self._emails = [e for e in self._emails if e.row_index in remaining_set]
-            
-            self.progress_log.log_info(msg)
-            self._start_sending()
-        else:
+
+        if not success:
             show_error(self, "Resume Failed", msg)
+            return
+
+        # Send only the rows the checkpoint says are still pending,
+        # without starting a new checkpoint session
+        remaining_set = set(remaining)
+        resume_emails = [e for e in self._emails if e.row_index in remaining_set]
+
+        if not resume_emails:
+            self.checkpoint_manager.suspend_session()
+            show_error(
+                self,
+                "Resume Failed",
+                "The remaining recipients are not in the current email list.\n\n"
+                "Reload the same Excel file and select the same recipients, "
+                "then try Resume again."
+            )
+            return
+
+        account_email = self.account_combo.currentData()
+        if account_email:
+            self.outlook_sender.select_account(account_email)
+
+        self.progress_log.log_info(msg)
+        self._launch_send(resume_emails)
     
     @pyqtSlot(int, int, str, bool, str)
     def _on_progress(self, current: int, total: int, email: str, success: bool, message: str) -> None:
@@ -546,11 +608,12 @@ class TabSend(QWidget):
     def _on_finished(self, results: dict) -> None:
         """Handle send completion."""
         self._is_sending = False
-        
-        # Complete checkpoint
-        self.checkpoint_manager.complete_session(
-            success=not results.get('cancelled', False)
-        )
+
+        # A cancelled run stays resumable; only a finished run is finalized
+        if results.get('cancelled', False):
+            self.checkpoint_manager.suspend_session()
+        else:
+            self.checkpoint_manager.complete_session(success=True)
         
         # Update UI
         self.start_btn.setEnabled(True)

@@ -352,11 +352,20 @@ class RecipientListWidget(QWidget):
     def get_selected_data(self) -> List[Dict[str, Any]]:
         """
         Get data for selected rows.
-        
+
         Returns:
             List of row dictionaries
         """
         return [self._data[i] for i in sorted(self._selected_indices)]
+
+    def get_all_data(self) -> List[Dict[str, Any]]:
+        """
+        Get all row data in display order.
+
+        Returns:
+            List of row dictionaries
+        """
+        return list(self._data)
     
     def get_selected_count(self) -> int:
         """

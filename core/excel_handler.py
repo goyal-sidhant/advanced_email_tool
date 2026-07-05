@@ -31,6 +31,16 @@ class ExcelHandler:
         self.filtered_data: List[Dict[str, Any]] = []
         self.row_count: int = 0
 
+    def close(self) -> None:
+        """Close the workbook and release the file handle."""
+        if self.workbook:
+            try:
+                self.workbook.close()
+            except Exception as e:
+                self.logger.warning(f"Error closing workbook: {e}")
+            self.workbook = None
+            self.worksheet = None
+
     def _find_sheet_name(self, sheet_name: str) -> Optional[str]:
         """Find actual sheet name using case-insensitive match."""
         if not self.workbook:
@@ -62,10 +72,7 @@ class ExcelHandler:
         """
         try:
             # Close any previously opened workbook to release file handle
-            if self.workbook:
-                self.workbook.close()
-                self.workbook = None
-                self.worksheet = None
+            self.close()
 
             self.logger.info(f"Loading Excel file: {file_path}")
             

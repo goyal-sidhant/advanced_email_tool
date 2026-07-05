@@ -5,6 +5,7 @@ Handles sending emails through Microsoft Outlook using COM automation.
 Supports multiple accounts, offline detection, and preview display.
 """
 
+import os
 import time
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
@@ -256,13 +257,24 @@ class OutlookSender:
             # Set body
             mail.HTMLBody = body_html
             
-            # Add regular attachments
+            # Add regular attachments — a failure here must block the send,
+            # otherwise the client receives an email missing their document
+            # while the log shows success
+            failed_attachments = []
             for attachment_path in email.attachments:
                 try:
                     mail.Attachments.Add(attachment_path)
                 except Exception as e:
                     self.logger.warning(f"Could not attach file: {attachment_path} - {e}")
-            
+                    failed_attachments.append(os.path.basename(str(attachment_path)))
+
+            if failed_attachments:
+                return False, (
+                    "Not sent - could not attach: "
+                    + ", ".join(failed_attachments)
+                    + " (file may be open, moved, or renamed)"
+                )
+
             # Send or display
             if display_only:
                 mail.Display()

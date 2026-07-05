@@ -673,25 +673,48 @@ class TabExcel(QWidget):
     
     def set_column_mapping(self, mapping: Dict[str, Optional[str]]) -> None:
         """
-        Set the column mapping.
-        
+        Set the column mapping (session/profile restore).
+
+        Delegates to _restore_column_mapping so every saved field —
+        including identifier2 and the AND/OR logic — is restored.
+
         Args:
             mapping: Dictionary with column mappings
         """
-        def set_combo(combo: QComboBox, value: Optional[str], has_none: bool = False):
-            actual_col = self._find_column(value) if value else None
-            if actual_col:
-                idx = combo.findText(actual_col)
-                if idx >= 0:
-                    combo.setCurrentIndex(idx)
-            elif has_none:
-                combo.setCurrentIndex(0)  # "-- None --"
-        
-        set_combo(self.to_combo, mapping.get('to'))
-        set_combo(self.cc_combo, mapping.get('cc'), has_none=True)
-        set_combo(self.bcc_combo, mapping.get('bcc'), has_none=True)
-        set_combo(self.identifier_combo, mapping.get('identifier'), has_none=True)
-    
+        self._restore_column_mapping(mapping)
+
+    def reset(self) -> None:
+        """Clear all loaded data and UI state (New Session)."""
+        self.excel_handler.close()
+        self._file_path = None
+        self._columns = []
+        self._data = []
+
+        self.file_label.setText("No file selected")
+        self.file_label.setStyleSheet("color: gray;")
+        self.file_label.setToolTip("")
+        self.reload_btn.setEnabled(False)
+
+        self.sheet_combo.blockSignals(True)
+        self.sheet_combo.clear()
+        self.sheet_combo.setEnabled(False)
+        self.sheet_combo.blockSignals(False)
+        self.row_count_label.setText("")
+
+        combos = [self.to_combo, self.cc_combo, self.bcc_combo,
+                  self.identifier_combo, self.identifier2_combo]
+        for combo in combos:
+            combo.blockSignals(True)
+            combo.clear()
+            combo.blockSignals(False)
+        self.logic_or_radio.setChecked(True)
+
+        self.preview_table.clearContents()
+        self.preview_table.setRowCount(0)
+        self.preview_table.setColumnCount(0)
+        self.validation_label.setText("")
+        self.preview_count_label.setText("")
+
     def get_columns(self) -> List[str]:
         """
         Get list of column names.

@@ -7,6 +7,7 @@ Saves the complete session state to JSON for restoration.
 
 import json
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional
@@ -91,6 +92,32 @@ class SessionManager:
             self.logger.error(f"Error loading session: {e}", exc_info=True)
             return None
     
+    @staticmethod
+    def has_meaningful_content(state: Optional[Dict[str, Any]]) -> bool:
+        """
+        Check whether a session snapshot contains anything worth restoring.
+
+        After 'New Session' the auto-save timer keeps running and saves an
+        empty snapshot; without this check the next launch would offer to
+        restore a blank session.
+        """
+        if not state:
+            return False
+
+        text_keys = ('excel_file_path', 'subject_template',
+                     'attachment_folder', 'universal_bcc')
+        if any(str(state.get(key) or '').strip() for key in text_keys):
+            return True
+
+        if state.get('static_attachments'):
+            return True
+
+        # The rich text editor emits boilerplate HTML even when empty —
+        # only visible text counts as content
+        body = str(state.get('body_template') or '')
+        body_text = re.sub(r'<[^>]+>', '', body).replace('&nbsp;', '')
+        return bool(body_text.strip())
+
     def has_saved_session(self) -> bool:
         """
         Check if a saved session exists.

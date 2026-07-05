@@ -40,6 +40,7 @@ class CheckpointManager:
         # Current session tracking
         self.session_id: Optional[str] = None
         self.total: int = 0
+        self.planned: List[int] = []
         self.completed: List[int] = []
         self.failed: List[int] = []
         self.is_active: bool = False
@@ -54,31 +55,40 @@ class CheckpointManager:
     
     def start_session(
         self,
-        total_recipients: int,
+        planned,
         excel_file: str = "",
         sending_account: str = ""
     ) -> str:
         """
         Start a new send session.
-        
+
         Args:
-            total_recipients: Total number of emails to send
+            planned: Row indexes being sent this session (a send can target
+                a subset of the Excel rows). A bare int is accepted for
+                backward compatibility and means rows 0..n-1.
             excel_file: Path to source Excel file
             sending_account: Email account being used
-            
+
         Returns:
             Session ID
         """
+        if isinstance(planned, int):
+            planned_indices = list(range(planned))
+        else:
+            planned_indices = list(planned)
+
         self.session_id = self._generate_session_id()
-        self.total = total_recipients
+        self.total = len(planned_indices)
+        self.planned = planned_indices
         self.completed = []
         self.failed = []
         self.is_active = True
-        
+
         checkpoint_data = {
             'session_id': self.session_id,
             'started_at': datetime.now().isoformat(),
-            'total_recipients': total_recipients,
+            'total_recipients': self.total,
+            'planned_indices': planned_indices,
             'excel_file': excel_file,
             'sending_account': sending_account,
             'completed_indices': [],
@@ -200,8 +210,21 @@ class CheckpointManager:
             f"Session complete: {len(self.completed)}/{self.total} sent, "
             f"{len(self.failed)} failed"
         )
-        
+
         return summary
+
+    def suspend_session(self) -> None:
+        """
+        Stop recording without finalizing the session.
+
+        The checkpoint file keeps status 'in_progress' so the session can
+        be resumed later (used when the user cancels mid-send).
+        """
+        if not self.is_active:
+            return
+
+        self.is_active = False
+        self.logger.info(f"Session suspended (resumable): {self.session_id}")
     
     def has_incomplete_session(self) -> bool:
         """
@@ -254,13 +277,16 @@ class CheckpointManager:
         checkpoint_data = self._load_checkpoint()
         if not checkpoint_data:
             return []
-        
-        total = checkpoint_data.get('total_recipients', 0)
+
+        planned = checkpoint_data.get('planned_indices')
+        if planned is None:
+            # Legacy checkpoint without planned rows: assume 0..n-1
+            planned = list(range(checkpoint_data.get('total_recipients', 0)))
         completed = set(checkpoint_data.get('completed_indices', []))
         failed = set(checkpoint_data.get('failed_indices', []))
         processed = completed | failed
-        
-        return [i for i in range(total) if i not in processed]
+
+        return [i for i in planned if i not in processed]
     
     def resume_session(self) -> Tuple[bool, str, List[int]]:
         """
@@ -279,6 +305,8 @@ class CheckpointManager:
         # Restore state
         self.session_id = checkpoint_data.get('session_id')
         self.total = checkpoint_data.get('total_recipients', 0)
+        planned = checkpoint_data.get('planned_indices')
+        self.planned = list(range(self.total)) if planned is None else planned
         self.completed = checkpoint_data.get('completed_indices', [])
         self.failed = checkpoint_data.get('failed_indices', [])
         self.is_active = True
@@ -305,6 +333,7 @@ class CheckpointManager:
             
             self.session_id = None
             self.total = 0
+            self.planned = []
             self.completed = []
             self.failed = []
             self.is_active = False

@@ -334,13 +334,15 @@ class MainWindow(QMainWindow):
                         identifiers.append(id2)
             self.tab_attachments.set_identifiers(identifiers)
         
-        # Update recipients tab
+        # Update recipients tab, keeping any curated selection — only the
+        # mapping changed, not the rows themselves
         columns = self.tab_excel.get_columns()
         data = self.tab_excel.get_data()
         self.tab_recipients.set_data(
             data, columns,
             mapping.get('to'),
-            mapping.get('identifier')
+            mapping.get('identifier'),
+            preserve_selection=True
         )
     
     def _on_template_changed(self) -> None:
@@ -490,8 +492,14 @@ class MainWindow(QMainWindow):
     def _check_restore_session(self) -> None:
         """Check for and offer to restore saved session."""
         if self.session_manager.has_saved_session():
+            # Don't offer to restore an empty snapshot (e.g. auto-saved
+            # right after a New Session)
+            state = self.session_manager.load_session()
+            if not SessionManager.has_meaningful_content(state):
+                return
+
             info = self.session_manager.get_session_info()
-            
+
             # Build detailed info
             excel_file = info.get('excel_file', 'Not set')
             if excel_file and excel_file != 'Not set':
@@ -545,7 +553,17 @@ class MainWindow(QMainWindow):
         
         if reply:
             self.session_manager.clear_session()
-            # Reset all tabs (would need reset methods)
+
+            # Fresh builder first, so reset-triggered signals repopulate it
+            # with empty state rather than the old one
+            self.email_builder = EmailBuilder()
+
+            self.tab_excel.reset()
+            self.tab_compose.reset()
+            self.tab_attachments.reset()
+            self.tab_recipients.clear()
+
+            self.tab_widget.setCurrentIndex(0)
             self.status_bar.showMessage("New session started")
     
     def _save_session(self) -> None:

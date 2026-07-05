@@ -503,6 +503,23 @@ class TabAttachments(QWidget):
         """Check if recursive scanning is enabled."""
         return self.recursive_check.isChecked()
     
+    def reset(self) -> None:
+        """Clear all attachment state (New Session)."""
+        self.static_file_list.clear()
+        self.matched_files_list.clear()
+        self.attachment_matcher.clear()
+        self._identifiers = []
+
+        self.folder_input.clear()
+        self.folder_input.setToolTip("")
+        self.recursive_check.blockSignals(True)
+        self.recursive_check.setChecked(False)
+        self.recursive_check.blockSignals(False)
+        self.scan_btn.setEnabled(False)
+        self.scan_status_label.setText("No folder selected")
+        self.stats_label.setText("")
+        self.test_input.clear()
+
     def set_folder(self, folder: str, recursive: bool = False) -> bool:
         """
         Set the attachment folder (for session restore).

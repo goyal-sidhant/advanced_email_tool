@@ -56,17 +56,20 @@ class RecipientListStorage:
         name: str,
         selected_indices: List[int],
         description: str = "",
-        source_file: str = ""
+        source_file: str = "",
+        recipient_emails: Optional[List[str]] = None
     ) -> Tuple[bool, str]:
         """
         Save a recipient list.
-        
+
         Args:
             name: List name
             selected_indices: List of selected row indices (0-based)
             description: Optional description
             source_file: Optional path to source Excel file
-            
+            recipient_emails: Email per selected row — lets the list follow
+                the same clients even after rows move in the Excel file
+
         Returns:
             Tuple of (success, message)
         """
@@ -99,6 +102,8 @@ class RecipientListStorage:
                 'created_at': existing_created or datetime.now().isoformat(),
                 'modified_at': datetime.now().isoformat(),
             }
+            if recipient_emails:
+                list_data['recipient_emails'] = list(recipient_emails)
             
             with open(list_path, 'w', encoding='utf-8') as f:
                 json.dump(list_data, f, indent=2)
@@ -138,6 +143,51 @@ class RecipientListStorage:
             self.logger.error(f"Error loading list: {e}", exc_info=True)
             return None
     
+    @staticmethod
+    def resolve_selection(
+        list_data: Dict[str, Any],
+        current_emails: List[str]
+    ) -> Tuple[List[int], List[str]]:
+        """
+        Match a saved list against the currently loaded rows.
+
+        Matches by email (case-insensitive) when the list stores emails,
+        so the selection follows the same clients even after rows are
+        inserted, deleted, or re-sorted in Excel. Older lists without
+        emails fall back to their raw indices, range-checked.
+
+        Args:
+            list_data: Saved list dictionary (from load_list)
+            current_emails: Email value of each currently loaded row, in order
+
+        Returns:
+            Tuple of (row indices to select, saved emails not found)
+        """
+        saved_emails = list_data.get('recipient_emails')
+
+        if not saved_emails:
+            max_idx = len(current_emails) - 1
+            saved_indices = list_data.get('selected_indices', [])
+            return [i for i in saved_indices if 0 <= i <= max_idx], []
+
+        email_rows: Dict[str, List[int]] = {}
+        for idx, email in enumerate(current_emails):
+            key = str(email or '').strip().lower()
+            if key:
+                email_rows.setdefault(key, []).append(idx)
+
+        indices: List[int] = []
+        missing: List[str] = []
+        for email in saved_emails:
+            key = str(email or '').strip().lower()
+            rows = email_rows.get(key)
+            if rows:
+                indices.extend(rows)
+            else:
+                missing.append(email)
+
+        return sorted(set(indices)), missing
+
     def get_selected_indices(self, name: str) -> Optional[List[int]]:
         """
         Get just the selected indices from a list.

@@ -132,28 +132,52 @@ class TabRecipients(QWidget):
         text = self.lists_combo.currentText()
         if text == "-- Select Saved List --":
             return
-        
+
         # Extract name (remove count part)
         name = text.rsplit(" (", 1)[0]
-        
-        indices = self.list_storage.get_selected_indices(name)
-        if indices is not None:
-            # Validate indices against current data
-            max_idx = self.recipient_list.get_total_count() - 1
-            valid_indices = [i for i in indices if i <= max_idx]
-            
-            if len(valid_indices) < len(indices):
+
+        list_data = self.list_storage.load_list(name)
+        if list_data is not None:
+            # Match saved recipients by email so the list follows the same
+            # clients even if rows moved in the Excel file
+            current_emails = self._current_email_values()
+            if current_emails:
+                indices, missing = RecipientListStorage.resolve_selection(
+                    list_data, current_emails
+                )
+            else:
+                # No email column mapped — fall back to raw indices
+                max_idx = self.recipient_list.get_total_count() - 1
+                indices = [
+                    i for i in list_data.get('selected_indices', [])
+                    if 0 <= i <= max_idx
+                ]
+                missing = []
+
+            if missing:
+                shown = "\n".join(f"• {email}" for email in missing[:10])
+                if len(missing) > 10:
+                    shown += f"\n… and {len(missing) - 10} more"
                 show_warning(
                     self,
                     "Partial Load",
-                    f"Some saved selections are out of range.\n"
-                    f"Loaded {len(valid_indices)} of {len(indices)} recipients."
+                    f"{len(missing)} saved recipient(s) are not in the "
+                    f"current Excel data and were skipped:\n\n{shown}"
                 )
-            
-            self.recipient_list.set_selected_indices(valid_indices)
-            self.logger.info(f"Loaded list '{name}' with {len(valid_indices)} recipients")
+
+            self.recipient_list.set_selected_indices(indices)
+            self.logger.info(f"Loaded list '{name}' with {len(indices)} recipients")
         else:
             show_error(self, "Error", f"Could not load list '{name}'.")
+
+    def _current_email_values(self) -> List[str]:
+        """Email value of every loaded row, in display order."""
+        if not self._email_column:
+            return []
+        return [
+            str(row.get(self._email_column, '') or '')
+            for row in self.recipient_list.get_all_data()
+        ]
     
     def _save_list(self) -> None:
         """Save current selection as a list."""
@@ -180,8 +204,19 @@ class TabRecipients(QWidget):
                 if reply != QMessageBox.Yes:
                     return
             
-            success, msg = self.list_storage.save_list(name, selected)
-            
+            # Store emails alongside indices so the list follows the same
+            # clients even after the Excel file changes
+            emails = None
+            if self._email_column:
+                emails = [
+                    str(row.get(self._email_column, '') or '')
+                    for row in self.recipient_list.get_selected_data()
+                ]
+
+            success, msg = self.list_storage.save_list(
+                name, selected, recipient_emails=emails
+            )
+
             if success:
                 self._refresh_lists()
                 show_info(self, "Saved", f"List '{name}' saved with {len(selected)} recipients.")
@@ -223,27 +258,37 @@ class TabRecipients(QWidget):
         data: List[Dict[str, Any]],
         columns: List[str],
         email_column: Optional[str] = None,
-        identifier_column: Optional[str] = None
+        identifier_column: Optional[str] = None,
+        preserve_selection: bool = False
     ) -> None:
         """
         Set recipient data.
-        
+
         Args:
             data: List of row dictionaries
             columns: List of column names
             email_column: Name of email column
             identifier_column: Name of identifier column
+            preserve_selection: Keep the current selection when the rows are
+                unchanged (used when only the column mapping changed).
+                Falls back to select-all if the row count differs.
         """
+        previous_count = self.recipient_list.get_total_count()
+        previous_selection = self.recipient_list.get_selected_indices()
+
         self._email_column = email_column
         self._identifier_column = identifier_column
-        
+
         self.recipient_list.set_data(
             data, columns, email_column, identifier_column
         )
-        
-        # Auto-select all by default
-        self.recipient_list.select_all()
-        
+
+        if preserve_selection and previous_count == len(data) and previous_count > 0:
+            self.recipient_list.set_selected_indices(previous_selection)
+        else:
+            # Auto-select all by default
+            self.recipient_list.select_all()
+
         self._update_summary()
     
     def _update_summary(self) -> None:
