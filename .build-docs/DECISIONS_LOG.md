@@ -218,7 +218,11 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
       settings to a file to share with a colleague or friend, and import such a file. Added to the
       Brief's Parking Lot (Section 9) with what each needs when picked up; nothing decided about how,
       nothing built. Profiles (F21) already cover part of (2): Profile › Save Profile… writes a
-      shareable file of the campaign settings.
+      shareable file of the campaign settings. The author then widened (2), the same day: "not only
+      profile, even the mail compose subject body and things" — the export also covers the Compose
+      tab's content and the saved email templates. (A profile already carries the current subject,
+      body and Universal BCC; the saved templates, saved lists and preferences cannot be exported
+      today.)
 - **Assumptions** (technical only — they stand unless the author objects):
   - A. The project tag in file names is `advanced_email_tool` (the repository's name).
   - B. The audit and the Brief describe `main` at commit `f5b9511` (v1.8.0).
@@ -432,6 +436,14 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
   and importing the settings file.
 - **Decided/Built:** Both parked in the Brief (Section 9) with notes, and here (Decided 34); Claude
   checked what a profile already holds (`ui/main_window.py:700-729`). Not planned, not built.
+- **Open:** the office-PC checks; the "to confirm when planned" points in the Brief.
+
+#### 03-11-2026 | Session 0 | Message 19
+- **Discussed:** The author widened Parking Lot idea (2): "not only profile, even the mail compose
+  subject body and things".
+- **Decided/Built:** The Parking Lot row and Decided 34 updated: the export covers the Compose tab's
+  subject and body (with pasted pictures — to check then) and the saved email templates, as well as
+  the profile settings. Not planned, not built.
 - **Open:** the office-PC checks; the "to confirm when planned" points in the Brief.
 
 ---
