@@ -575,7 +575,8 @@ Section 1, then Section 7 (G1-G4, G11, G14, G19-G22, G25, G31, G41 first), then 
 
 ## 9. PARKING LOT
 
-Ideas already parked in the app's own `ROADMAP.md` (lines 185-196 and 222), carried over unchanged.
+Ideas already parked in the app's own `ROADMAP.md` (lines 185-196 and 222), carried over unchanged, and
+the ideas you have parked since.
 
 | Idea | When it came up | Priority | Status |
 |------|----------------|----------|--------|
@@ -589,6 +590,8 @@ Ideas already parked in the app's own `ROADMAP.md` (lines 185-196 and 222), carr
 | Graph API (New Outlook) | January 2026 | Maybe someday | "Major rewrite, avoid if possible" — see G37, Q2. The mailboxes are a mix (Q2a), so a replacement would need Graph *and* SMTP |
 | Mac support | January 2026 | Maybe someday | Parked |
 | Gmail/SMTP support | January 2026 | Maybe someday | Parked |
+| Send emails by signing in to the mail service itself (OAuth), as a setting, instead of only through Outlook | 03-11-2026 (you) | — (not set) | Parked by you. Today every email goes through classic Outlook, which signs in by itself; the app never handles a password or a sign-in. **When picked up** (Standard 12, Email; Standard 13): the Microsoft 365 mailboxes through Microsoft Graph, which needs a one-time app registration in Microsoft Entra that you do; the Gmail mailboxes through Google's own sign-in, which needs a Google Cloud project and possibly Google's review of the app *(to check then)*; sign-in tokens kept per Windows user, encrypted, under `%LOCALAPPDATA%` — never in the shared folder or in `C:\Users\Public` (Change 9); a copy of every email in Sent. It would also free the app from classic Outlook (G37). *Questions then: which mailboxes first; does Outlook stay as the other choice; are the Gmail mailboxes company (Google Workspace) or personal accounts?* Joins the "Graph API (New Outlook)" and "Gmail/SMTP support" ideas above |
+| Export the app's settings to a file to share with a colleague or friend, and import such a file | 03-11-2026 (you) | — (not set) | Parked by you. **Partly there today:** Profile › Save Profile… already writes a file you can share — the Excel file's location and column mapping, subject, body, Universal BCC, static files, attachments folder, the on/off switches and the Send-from account (saved, but not brought back on load: G7) — and Load Profile… reads it (F21; Change 4: loading replaces everything). Not in a profile: the saved email templates, the saved recipient lists and the preferences. **When picked up:** what goes in the file; what happens on import when a template or list of the same name exists (replace, keep both, ask); locations that do not exist on the other PC; client data — saved recipient lists hold client email addresses (recommended then: leave them out unless chosen, above all for someone outside the office); never a password or sign-in token (Standard 13). It would also be the way to copy templates and lists between PCs if Change 9 gives each PC its own |
 
 ---
 

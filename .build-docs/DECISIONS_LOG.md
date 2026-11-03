@@ -213,6 +213,12 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
       opens on its first sheet, and the drop-down always names the sheet read (stated on the card as
       a plain fix), so Apply and Refresh never change sheets. Rule R13 changes; new contract C28.
       Not built.
+  34. **Two ideas parked (author, 03-11-2026):** (1) make the app able to send by signing in to the
+      mail service itself (OAuth), as a setting, instead of only through Outlook; (2) export the app's
+      settings to a file to share with a colleague or friend, and import such a file. Added to the
+      Brief's Parking Lot (Section 9) with what each needs when picked up; nothing decided about how,
+      nothing built. Profiles (F21) already cover part of (2): Profile › Save Profile… writes a
+      shareable file of the campaign settings.
 - **Assumptions** (technical only — they stand unless the author objects):
   - A. The project tag in file names is `advanced_email_tool` (the repository's name).
   - B. The audit and the Brief describe `main` at commit `f5b9511` (v1.8.0).
@@ -419,6 +425,13 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
 - **Decided/Built:** Q18 → Change 10 (C26), Q19 → Change 11 (C27), Q20 → Change 12 (C28), recorded in
   the Brief and here (Decided 31-33); G42 added to the audit; CLAUDE.md *Current Phase* and
   RESUME_CONTEXT brought up to date. Not built.
+- **Open:** the office-PC checks; the "to confirm when planned" points in the Brief.
+
+#### 03-11-2026 | Session 0 | Message 18
+- **Discussed:** Two Parking Lot ideas from the author: sending through OAuth sign-in, and exporting
+  and importing the settings file.
+- **Decided/Built:** Both parked in the Brief (Section 9) with notes, and here (Decided 34); Claude
+  checked what a profile already holds (`ui/main_window.py:700-729`). Not planned, not built.
 - **Open:** the office-PC checks; the "to confirm when planned" points in the Brief.
 
 ---

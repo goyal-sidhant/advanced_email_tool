@@ -50,6 +50,8 @@
   12. a newly chosen workbook opens on its first sheet, and the drop-down always names the sheet
       read.
   The points marked "to confirm when planned" in the Brief are asked at that change's .1 Plan.
+- **Parking Lot:** two ideas added by the author on 03-11-2026 — sending by signing in to the mail
+  service (OAuth), and exporting and importing the app's settings (Brief Section 9). Not planned.
 - **Open:** no business question. The office-PC checks (Decisions Log, Session 0, *Open*: checks
   1-13, check 8 answered), and the "to confirm when planned" points in the Brief, asked when their
   change is planned.
