@@ -98,6 +98,7 @@ From the git history (each was a real failure in use) and from the adoption audi
     ignored by git; run them in a copy when the working folder must stay untouched.
 11. **This cloud session cannot open the window, Outlook, Excel or the office share.** Anything that
     depends on them is an office-PC check; dummy data only, never real client files.
-12. **One `Send()` per email.** `core/outlook_sender.py` hands each email to Outlook once and never
-    again, except through Resume or Retry. A double copy in Sent therefore starts with office-PC
-    check 13, not with the app's code (Q16).
+12. **One `Send()` per email.** `core/outlook_sender.py` hands each email to Outlook once; it goes
+    again only when someone runs the batch again — Start Sending after a cancel, Resume or Retry
+    (G1-G3, G5). A double copy of every email in Sent therefore starts with office-PC check 13, not
+    with the app's code (Q16).

@@ -448,9 +448,10 @@ see "Seen in use" after this list.*
 - **Emails sent with client files show twice in Sent.** A "2" appears beside each one, and opening
   it shows two identical copies, although the Outbox held it once. No client has ever said they got
   two. Gmail is one of the accounts set up in classic Outlook. The app hands each email to Outlook
-  once: one `Send()` per email, and nothing sends it again except Resume or Retry (code read:
-  `core/outlook_sender.py`, line 363; checked with a fake Outlook on 03-11-2026 — 3 emails, 3 items
-  created, 3 sends). *(inferred, not confirmed)* The likely causes, most likely first: Outlook and
+  once: one `Send()` per email; it goes again only when someone runs the batch again — Start
+  Sending after a cancel, Resume or Retry (G1-G3, G5). Code read: `core/outlook_sender.py`, line
+  363; checked with a fake Outlook on 03-11-2026 — 3 emails, 3 items created, 3 sends.
+  *(inferred, not confirmed)* The likely causes, most likely first: Outlook and
   the Gmail account each keep a copy (Gmail's server files every email it sends in "Sent Mail",
   and classic Outlook can upload its own copy to the same folder); a Universal BCC or CC to the
   sending mailbox itself, which Gmail shows in the same conversation; or Outlook's conversation
