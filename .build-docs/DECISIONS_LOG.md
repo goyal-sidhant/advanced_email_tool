@@ -99,6 +99,24 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
   9. Safety-net tests that pin today's behaviour are proposed now (below), written later, and run
      before any future change.
   10. The work is committed on a new branch, `adopt-toolkit`, not on `main`.
+  11. **Q1 answered (author, 03-11-2026):** the app's folder is in a shared folder on the office
+      server; the sharing of the app data has never been tested. So every user shares one
+      `.app_data` (session, send checkpoint, templates, lists, preferences, log): gaps G24 and G36
+      apply. How staff start the app is still open.
+  12. **Q2 answered (author, 03-11-2026):** every PC that sends uses classic Outlook. G37 (New
+      Outlook cannot be automated) stays a future risk only. The mailbox provider is still open.
+  13. **Q3 answered (author, 03-11-2026):** "the identifiers are selected so that it doesn't hit
+      other client's file". So "contains" matching stays as it is and no overlap check is added;
+      G11 is an accepted risk, covered by how the office chooses identifiers. Rule R22 and Contract
+      C7 unchanged. Not affected by this answer, still open: G12 (AND with one identifier blank),
+      G14 (stale results after a Rescan), G15 (statistics in AND mode), G41 (missing client files
+      hidden by static files).
+  14. **Q4 answered (author, 03-11-2026): "Fix all three"** — Change 1 in the Brief: Resume and
+      Retry Failed ask first; Resume goes ahead only when the same Excel file and the same clients
+      (checked by email) are loaded; a Preview-mode run never counts as sent. New or extended
+      contracts C4, C15, C16 — decided, **not yet built**: it is built only when the author asks for
+      the change, through a Change Request and a Build Plan. Until then the proposed safety-net test
+      T6 pins today's behaviour; the change replaces those pins with tests of the new rule.
 - **Assumptions** (technical only — they stand unless the author objects):
   - A. The project tag in file names is `advanced_email_tool` (the repository's name).
   - B. The audit and the Brief describe `main` at commit `f5b9511` (v1.8.0).
@@ -158,7 +176,7 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
     `pytest` in a development requirements list.
 - **Open:**
   - Business questions Q1-Q17 — the full list, with recommended defaults, is at the end of the
-    Brief. Asked first, one at a time: Q1-Q4.
+    Brief. Asked first, one at a time: Q1-Q4 — answered 03-11-2026 (Decided 11-14).
   - **Needs an office PC** (cannot be checked in the cloud):
     1. Run the app's tests there (`py -m pytest` in the app folder; expect 82 passed) and note the
        Windows, Python, PyQt5, pywin32 and openpyxl versions (`py -m pip list`).
@@ -174,8 +192,12 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
        (C2), and note that every recipient is ticked again (G19).
     7. Where the app's folder and its `.app_data` live, and whether several users or OneDrive share
        them (G24, G36).
-    8. Whether any sending PC has New Outlook switched on (G37).
+    8. ~~Whether any sending PC has New Outlook switched on (G37).~~ Answered by the author (Q2):
+       classic Outlook on all sending PCs.
     9. A dummy copy of a workbook exported by your other software loads all its rows (G25).
+    10. Because the app runs from the shared server folder (Q1): with dummy data only, open it on two
+        PCs at once and note what each sees — the "Restore Previous Session?" prompt and the
+        "Resume Previous" button may show the *other* person's work (G24).
 - **Exchanges:**
 
 #### 03-11-2026 | Session 0 | Message 1
@@ -186,6 +208,31 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
   questions Q1-Q17, this log, RESUME_CONTEXT, `readme_template.md` copy, `context/.gitkeep`. No code
   file changed.
 - **Open:** Q1-Q4 asked next, one at a time; the remaining questions and the office-PC checks above.
+
+#### 03-11-2026 | Session 0 | Message 2
+- **Discussed:** Q1 — where the app's folder lives.
+- **Decided/Built:** Answer recorded (shared folder on the office server; sharing of `.app_data`
+  never tested) in the Brief (Section 2, Q1, Q12, Section 6), CLAUDE.md (Tech Stack) and here;
+  office-PC check 10 added.
+- **Open:** how staff start the app; Q2-Q4 next.
+
+#### 03-11-2026 | Session 0 | Message 3
+- **Discussed:** Q2 — which Outlook the sending PCs use.
+- **Decided/Built:** Answer recorded (classic Outlook on all sending PCs) in the Brief (Section 2,
+  Q2, Section 6), CLAUDE.md (Tech Stack) and here; office-PC check 8 closed.
+- **Open:** the mailbox provider; Q3-Q4 next.
+
+#### 03-11-2026 | Session 0 | Message 4
+- **Discussed:** Q3 — identifiers that are contained in other identifiers (wrong-client files).
+- **Decided/Built:** Leave as is; identifiers are chosen so none hits another client's file. Recorded
+  in the Brief (Sections 3, 5 and 6, Q3) and here (Decided 13); G11 moved to "not worth handling".
+- **Open:** the kinds of identifier in use; Q4 next.
+
+#### 03-11-2026 | Session 0 | Message 5
+- **Discussed:** Q4 — Resume and Retry safety (G1-G3).
+- **Decided/Built:** "Fix all three" recorded as Change 1 in the Brief (Section 5, contracts C4
+  extended, C15, C16; F19 now KEEP BUT IMPROVE) and here (Decided 14). Not built.
+- **Open:** Q5-Q17 when the author is ready; office-PC checks; approval of safety-net tests (Q17).
 
 ---
 

@@ -22,8 +22,9 @@ technical jargon — explain it on first use.
   `subprocess` (`tasklist`, `explorer`). The tests use `pytest`, which is not in
   `requirements.txt`. Excel through COM and Power Query are not used.
 - **Mail:** classic Outlook for Windows (desktop), driven through COM; emails go
-  out from the user's own Outlook mailboxes. New Outlook cannot be automated: the
-  app detects it and explains how to switch back.
+  out from the user's own Outlook mailboxes. Every sending PC uses classic Outlook
+  (my answer, 03-11-2026). New Outlook cannot be automated: the app detects it and
+  explains how to switch back.
 - **Shared portable Python (nothing installed on staff PCs):** NO — on hold.
   Only I change this to YES, once the shared Python is set up (MASTER_GUIDE A1).
 - **Runtime:** while NO, the Python installed on each staff PC plus this app's
@@ -31,14 +32,16 @@ technical jargon — explain it on first use.
   office PCs run is not recorded in the repo (README says 3.10+) — an open question
   in the Brief. Standard 13 covers both settings; moving this app onto it (Python
   3.14 with the py launcher, a windowless `.bat` launcher) is a change I approve first.
-- **Shared apps folder:** not recorded — where the app's folder lives today is an
-  open question in the Brief.
+- **Shared apps folder:** the app's folder lives in a shared folder on the office
+  server (my answer, 03-11-2026), so every user shares its `.app_data` (see User data).
 - **How users start it:** today `python main.py` from the app's folder (README and
   QUICKSTART). The repo has no `Run Advanced Email Tool.bat` and no shortcut set-up.
   *(How staff actually start it is unconfirmed — open question in the Brief.)*
 - **User data:** `.app_data\` inside the app's own folder (`config.py:24`): sessions,
   templates, recipient lists, the send checkpoint, preferences and the log (which
-  contains client email addresses). Git ignores it; never commit it.
+  contains client email addresses). Because the folder is shared, all users share
+  these files — never tested (Brief Q1, Q12; audit G24, G36). Git ignores
+  `.app_data`; never commit it.
 
 ## Reference Documents
 - `.build-docs/PROJECT_AUDIT_advanced_email_tool.md` — Full audit of the app as it is
@@ -62,8 +65,10 @@ technical jargon — explain it on first use.
 
 ## Current Phase
 Adopted into the toolkit (Session 0, 03-11-2026): documentation only, no code
-changed; the app is at v1.8.0 (commit f5b9511). No change in progress. Next: my
-answers to the open questions in the Brief, then a Build Plan when I ask for a change.
+changed; the app is at v1.8.0 (commit f5b9511). Questions Q1-Q4 answered; Change 1
+(Resume and Retry made safe) is decided in the Brief but not built. No change in
+progress. Next: the remaining open questions (Q5-Q17), then a Build Plan when I ask
+for a change.
 > Once the build starts: Sub-phase [N.M] [name] · Step [.K] [step name] · [status].
 > Updated at the end of every step (Build Loop rule 1).
 

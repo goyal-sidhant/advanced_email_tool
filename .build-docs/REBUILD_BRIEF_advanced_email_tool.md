@@ -18,7 +18,8 @@
 > my reading of intent or of how the office uses the app — please confirm or correct it.
 >
 > Numbers used below: features **F1–F25** (audit Section 3), rules **R1–R46** (audit Section 5), gaps
-> **G1–G41** (audit Section 7), Contracts **C1–C14** (Section 5 below), questions **Q1–Q17** (end).
+> **G1–G41** (audit Section 7), Contracts **C1–C16** (Section 5 below; C15-C16 decided, not yet
+> built), questions **Q1–Q17** (end).
 
 ---
 
@@ -45,15 +46,21 @@ mailbox, keeping track so an interrupted run can continue.
 - **Frequency of use:** "~50-100 emails every 10 days" (`ROADMAP.md:233`).
 - **Environment:** Windows 10/11 with classic Outlook desktop (`README.md:28-30`). Recipient
   workbooks and attachment folders on local disks, OneDrive *(inferred from commit messages
-  `fe04ce9`, `4a278bf`)* and network shares *(inferred from the network-path code)*. Where the app's
-  own folder lives is question Q1.
+  `fe04ce9`, `4a278bf`)* and network shares *(inferred from the network-path code)*.
+- **Where the app runs (your answer to Q1, 03-11-2026):** from **a shared folder on the office
+  server**. So every user shares the one `.app_data` folder inside it — the session, the send
+  checkpoint, templates, saved lists, preferences and the log. Sharing it has **never been tested**
+  (gaps G24, G36). How staff start the app is not yet answered.
+- **Mail program (your answer to Q2, 03-11-2026):** every PC that sends uses **classic Outlook**.
+  The mailbox provider (Microsoft 365 or other) was not stated.
 
 ---
 
 ## 3. FEATURE DECISIONS
 
-Every feature is **KEEP AS-IS** for now: that is the adoption default, not a decision you have made.
-The notes name the gaps that are candidates for "KEEP BUT IMPROVE"; each needs your decision.
+Every feature is **KEEP AS-IS** for now — the adoption default, not a decision you have made —
+except F19, where your answer to Q4 decided a change. The notes name the gaps that are candidates for
+"KEEP BUT IMPROVE"; each needs your decision.
 
 | Feature | Audit Ref | Decision | Notes |
 |---------|-----------|----------|-------|
@@ -67,7 +74,7 @@ The notes name the gaps that are candidates for "KEEP BUT IMPROVE"; each needs y
 | Email templates | F8 | KEEP AS-IS | Names that differ only in symbols share one file |
 | Universal BCC | F9 | KEEP AS-IS | **G4: a BCC typed last is ignored** (Q6) |
 | Static attachments | F10 | KEEP AS-IS | — |
-| Variable attachments by identifier | F11 | KEEP AS-IS | **G11: one client's identifier can pick up another's files**; G12-G17 (Q3) |
+| Variable attachments by identifier | F11 | KEEP AS-IS | "Contains" matching kept by your decision (Q3): identifiers are chosen so none hits another client's file (G11 accepted). Still open: G12-G17 |
 | Attachment on/off switches | F12 | KEEP AS-IS | Gap: G41 |
 | Choose recipients | F13 | KEEP AS-IS | **G19: Excel Refresh ticks everyone again** (Q5) |
 | Saved recipient lists | F14 | KEEP AS-IS | Follow clients by email (C9) |
@@ -75,7 +82,7 @@ The notes name the gaps that are candidates for "KEEP BUT IMPROVE"; each needs y
 | Connect to Outlook | F16 | KEEP AS-IS | Classic Outlook only (G37, Q2) |
 | Send the batch | F17 | KEEP AS-IS | Gaps: G5-G10, G41 |
 | Test email to yourself | F18 | KEEP AS-IS | Clears CC/BCC, so it cannot show the BCC |
-| Checkpoint, Resume, Retry failed | F19 | KEEP AS-IS | **G1-G3: Resume/Retry send without asking; Resume can hit another file's rows; Preview mode counts as sent** (Q4) |
+| Checkpoint, Resume, Retry failed | F19 | KEEP BUT IMPROVE | **Decided (Q4): Change 1** — Resume/Retry ask first; Resume only on the same file and clients (by email); Preview mode never counts as sent (G1-G3). Not yet built |
 | Session auto-save and restore | F20 | KEEP AS-IS | **G20: restores ticks by row number**; G21, G23, G24 (Q5) |
 | Profiles | F21 | KEEP AS-IS | **G22: keeps the previous campaign's static files** (Q7) |
 | Remembered folders and window | F22 | KEEP AS-IS | — |
@@ -142,8 +149,10 @@ whose fix would change them — whether to change them is a question at the end.
   `data/template_storage.py`, lines 49-52)
 
 **Attachments**
-- ⚠ R22 — A file belongs to a client if its **file name contains** the identifier, ignoring case; the
-  folder name does not count (G11, Q3) — (Audit: `core/attachment_matcher.py`, lines 122-134)
+- R22 — A file belongs to a client if its **file name contains** the identifier, ignoring case; the
+  folder name does not count. **Kept by your decision (Q3, 03-11-2026):** identifiers are chosen so
+  that none can hit another client's file; no overlap check (G11 accepted) — (Audit:
+  `core/attachment_matcher.py`, lines 122-134)
 - ⚠ R23 — OR by default; AND (both in one name) only when the row has both identifiers, otherwise
   the one present is used (G12) — (Audit: `core/email_builder.py`, lines 279-284)
 - R24 — Subfolders only when ticked; all file types — (Audit: `utils/file_utils.py`, lines 266-322)
@@ -153,17 +162,18 @@ whose fix would change them — whether to change them is a question at the end.
   lines 340-356)
 
 **Sending**
-- ⚠ R29 — Start Sending asks for confirmation; Resume and Retry Failed do not (G2, Q4) — (Audit:
-  `ui/tab_send.py`, lines 592-600, 667-696, 777-800)
+- ⚠ R29 — Start Sending asks for confirmation; Resume and Retry Failed do not (G2) — **to change:
+  Change 1 (Q4)** — (Audit: `ui/tab_send.py`, lines 592-600, 667-696, 777-800)
 - R30 — Delay between emails: default 1 s, choice 1-30 s — (Audit: `ui/tab_send.py`, lines 224-226)
 - R31 — Cancel never asks; stops within about 0.1 s — (Audit: `ui/tab_send.py`, lines 653-665)
 - R32 — The batch stops after 3 failures in a row — (Audit: `core/outlook_sender.py`, line 438)
 - R33 — A cancelled or self-stopped run stays resumable; a finished run is closed even with
   failures — (Audit: `ui/tab_send.py`, lines 728-733)
-- ⚠ R34 — Resume sends planned rows not marked sent or failed, matched **by row number** (G1, Q4);
-  Retry resends only failed rows — (Audit: `data/checkpoint.py`, lines 273-292)
-- ⚠ R35 — Preview mode opens each email in Outlook and is recorded as if sent (G3, Q4) — (Audit:
-  `ui/tab_send.py`, lines 65-73)
+- ⚠ R34 — Resume sends planned rows not marked sent or failed, matched **by row number** (G1);
+  Retry resends only failed rows — **to change: Change 1 (Q4)** — (Audit: `data/checkpoint.py`,
+  lines 273-292)
+- ⚠ R35 — Preview mode opens each email in Outlook and is recorded as if sent (G3) — **to change:
+  Change 1 (Q4)** — (Audit: `ui/tab_send.py`, lines 65-73)
 - ⚠ R36 — Sends from the account chosen in "Send from"; at each start the first Outlook account; if
   setting it fails, the default account is used with only a log warning (G7, Q11) — (Audit:
   `core/outlook_sender.py`, lines 177-179 and 309-318)
@@ -178,7 +188,21 @@ whose fix would change them — whether to change them is a question at the end.
 The full list (R1-R46, including window sizes and message limits) is in audit Section 5.
 
 ### Rules to CHANGE:
-None decided yet. The candidate changes are the ⚠ rules above; each one is a question at the end.
+**Decided — not yet built** (built only when you ask for the change; the Build Plan comes then):
+
+- **Change 1 — Resume and Retry made safe** (your answer to Q4, 03-11-2026: "Fix all three")
+  - **Old rule:** Start Sending asks for confirmation, but Resume Previous and Retry Failed send at
+    once (R29); Resume picks the remaining emails by **row number** only, so after another Excel file
+    is loaded it sends to that file's rows (R34); a Preview-mode run is recorded as sent, so a later
+    real Resume skips those clients for good (R35).
+  - **New rule:** (a) Resume and Retry Failed show the number of emails and ask before anything is
+    sent, like Start Sending; (b) Resume goes ahead only when the same Excel file and the same
+    clients — checked by email address, not row number — are loaded, and otherwise refuses and says
+    why; (c) a Preview-mode run never counts as sent: its clients stay pending for a real send.
+  - **Why:** gaps G1-G3, each reproduced on dummy data — another file's clients emailed, clients never
+    emailed, and no chance to stop.
+
+The other candidate changes are the remaining ⚠ rules above; each one is a question at the end.
 
 ### Rules to ADD (not in original):
 None decided yet.
@@ -202,8 +226,8 @@ contract only after you approve it here first.*
   checkpoint has marked sent or failed, even after several interruptions. (`data/checkpoint.py:273-292`;
   tests `test_checkpoint.py`, `test_tab_send_resume.py`)
 - **C4** — Start Sending shows the number of emails and asks for confirmation before anything is sent
-  or displayed. (`ui/tab_send.py:589-600`; no test yet) — *Resume and Retry Failed do not ask (G2):
-  whether they must is Q4.*
+  or displayed. (`ui/tab_send.py:589-600`; no test yet) — *Resume and Retry Failed do not ask today
+  (G2); Q4 decided they must: see "C4 (extended)" below.*
 - **C5** — Cancel never asks, takes effect before the next email (within about 0.1 s of a pause), and
   a cancelled or self-stopped run stays resumable. (`ui/tab_send.py:653-665, 728-733`; tests
   `test_send_batch.py`, `test_send_ux.py`, `test_tab_send_resume.py`)
@@ -212,7 +236,8 @@ contract only after you approve it here first.*
 - **C7** — A recipient's attachments are exactly: the static files (when switched on) plus every
   indexed file whose **name contains** the recipient's identifier, ignoring case — OR across the two
   identifiers, AND only when the row has both. Nothing else is attached. (`core/attachment_matcher.py:107-229`;
-  `core/email_builder.py:257-289`; no end-to-end test yet) — *whether "contains" stays is Q3.*
+  `core/email_builder.py:257-289`; no end-to-end test yet) — *Q3: "contains" stays; identifiers
+  are chosen so that none hits another client's file.*
 - **C8** — The session, the send checkpoint, saved recipient lists and preferences are written so a
   crash never leaves them half-written. (`utils/file_utils.py:16-29`; test `test_persistence.py`)
 - **C9** — A saved recipient list selects the same clients by email after rows move in Excel, and
@@ -230,6 +255,15 @@ contract only after you approve it here first.*
   re-select everyone (G19): Q5.*
 - **C14** — The test email goes only to the sending account's own address, from the account chosen in
   "Send from", with CC and BCC removed. (`ui/tab_send.py:519-567`; test `test_tab_send_test_email.py`)
+
+**Decided, not yet built** (Change 1 above, Q4). They take effect with the change that builds them;
+until then the safety-net tests pin today's behaviour, and the Change Request replaces those tests:
+- **C4 (extended)** — Start Sending, Resume Previous and Retry Failed all show the number of emails and
+  ask before anything is sent or displayed.
+- **C15** — Resume sends only when the Excel file and the clients (checked by email address) match the
+  interrupted run; otherwise it sends nothing and says why.
+- **C16** — A Preview-mode run never counts as sent: every client it only displayed stays pending for a
+  real send.
 
 ---
 
@@ -262,19 +296,23 @@ Reference audit Sections 6 and 7.
 ### Must handle (were NOT handled — gaps from Section 7 that bit you):
 *Which of these have actually happened is question Q16. Found by the audit (HIGH first):*
 - G1-G3 — Resume/Retry without confirmation; Resume can hit another file's rows; Preview mode
-  counts as sent.
+  counts as sent — **decided: Change 1 (Q4)**, not yet built.
 - G4 — Universal BCC typed last is ignored.
-- G11, G14, G41 — one client's identifier picking up another's files; stale "no files" after a
-  Rescan; missing client files hidden by static files.
+- G14, G41 — stale "no files" after a Rescan; missing client files hidden by static files.
 - G19, G20, G22 — Refresh re-selects everyone; restore by row number; profile keeps old static files.
 - G25 — some exported workbooks load only their first rows.
 - G31 — `{MISSING}` sent to clients.
-- G24, G36, G37 — shared `.app_data`; classic Outlook only.
+- G24, G36 — shared `.app_data`: **known to apply** (the app runs from a shared server folder, Q1).
+- G37 — classic Outlook only: every sending PC uses it today (Q2), so this is a future risk — it
+  would bite only if a PC moved to New Outlook.
 
 ### Not worth handling (over-engineering for my use case):
-*For you to decide.* Candidates: G9 (duplicate addresses), G17 (subfolder tick needs a Rescan), G30
-(`.xls`/`.csv`), G34 (unusual picture formats), G39 (shared log rollover), G40 (test email during a
-batch).
+- **G11 — identifiers contained in other identifiers** (`101` inside `1010`): decided not worth a
+  check (Q3, 03-11-2026) — "the identifiers are selected so that it doesn't hit other client's file".
+
+*Still for you to decide.* Candidates: G9 (duplicate addresses), G17 (subfolder tick needs a
+Rescan), G30 (`.xls`/`.csv`), G34 (unusual picture formats), G39 (shared log rollover), G40 (test
+email during a batch).
 
 ---
 
@@ -335,14 +373,14 @@ Ideas already parked in the app's own `ROADMAP.md` (lines 185-196 and 222), carr
 
 Business questions are asked one at a time, in plain English, with a recommended default (Build Loop
 rule 3). Each answer is written back into this Brief — as a rule, a contract or an edge case — and
-into the Decisions Log. **Asked first:** Q1-Q4.
+into the Decisions Log. **Asked first:** Q1-Q4 — answered on 03-11-2026.
 
 | # | Question | Why it matters | Recommended default |
 |---|---|---|---|
-| Q1 | Where does the app's folder live, and how do staff start it today — each PC's own copy, one shared office folder, OneDrive, or only your PC? | All users of one folder share `.app_data` (sessions, the send checkpoint, templates, the log) — G24, G36; it also decides the launcher later (Standard 13) | — (a fact) |
-| Q2 | Do all PCs that send use **classic** Outlook? Any on New Outlook? Are the mailboxes Microsoft 365 or another provider? | The app cannot work with New Outlook (G37) | — (a fact) |
-| Q3 | What do your identifiers look like (full PAN/GSTIN, numeric client codes, client names)? Should a future change stop before sending when one file matches more than one selected client? | "Contains" matching lets `101` pick up `1010_…` and `Ram` pick up `Shriram …` — another client's documents (G11) | Stop and list such files before sending |
-| Q4 | Should Resume and Retry Failed ask before sending, refuse when the Excel file or recipients differ from the interrupted run, and never treat Preview mode as sent? | Today they send at once, by row number, and Preview-mode emails count as sent (G1-G3) | Yes to all three |
+| Q1 | Where does the app's folder live, and how do staff start it today — each PC's own copy, one shared office folder, OneDrive, or only your PC? | All users of one folder share `.app_data` (sessions, the send checkpoint, templates, the log) — G24, G36; it also decides the launcher later (Standard 13) | **Answered 03-11-2026:** a shared folder on the office server; sharing of the app data never tested. *Still open: how staff start it.* |
+| Q2 | Do all PCs that send use **classic** Outlook? Any on New Outlook? Are the mailboxes Microsoft 365 or another provider? | The app cannot work with New Outlook (G37) | **Answered 03-11-2026:** classic Outlook on all sending PCs. *Still open: the mailbox provider.* |
+| Q3 | What do your identifiers look like (full PAN/GSTIN, numeric client codes, client names)? Should a future change stop before sending when one file matches more than one selected client? | "Contains" matching lets `101` pick up `1010_…` and `Ram` pick up `Shriram …` — another client's documents (G11) | **Answered 03-11-2026:** leave as is — "the identifiers are selected so that it doesn't hit other client's file". No overlap check. G11 is an accepted risk, covered by how identifiers are chosen. *(The kinds of identifier used were not stated.)* |
+| Q4 | Should Resume and Retry Failed ask before sending, refuse when the Excel file or recipients differ from the interrupted run, and never treat Preview mode as sent? | Today they send at once, by row number, and Preview-mode emails count as sent (G1-G3) | **Answered 03-11-2026:** fix all three → Change 1 (Section 5), contracts C4 (extended), C15, C16. Not yet built |
 | Q5 | When you click Excel Refresh, or restore a session, should your hand-picked selection be kept by client (email), like saved lists? | Today Refresh ticks everyone again and restore ticks by row number (G19, G20) | Keep it by email; list anyone no longer in the file |
 | Q6 | Should the Universal BCC always apply exactly as typed, and should Preview show CC and BCC? | A BCC typed last is silently ignored (G4) | Yes |
 | Q7 | When you load a profile, should it replace every setting it covers — clearing static files and the folder when the profile has none? | Today the previous campaign's static files stay (G22) | Yes, replace everything |
@@ -350,7 +388,7 @@ into the Decisions Log. **Asked first:** Q1-Q4.
 | Q9 | Do your templates use amounts, percentages or dates? How should they appear (e.g. 1,50,000.00; 18%; 01-04-2026)? | Today: 150000, 0.18, 2026-04-01 00:00:00 (G32) | Show values as formatted in Excel |
 | Q10 | Rows with a blank or invalid address: list them before sending and leave them out, or send anyway? | Today they reach Outlook; three blank rows in a row stop the batch (G6) | List them and leave them out unless you confirm |
 | Q11 | Should the app remember the last "Send from" account, and stop (rather than use the default account) if Outlook refuses it? | Today each start picks the first account; a refused account falls back silently (G7) | Remember it; stop if refused |
-| Q12 | Keep user data in `.app_data` inside the app's folder, or move it to each user's own folder (Standard 13)? | Depends on Q1 (G24, G36) | Keep if each PC has its own copy; move per user if the folder is shared |
+| Q12 | Keep user data in `.app_data` inside the app's folder, or move it to each user's own folder (Standard 13)? | The folder is shared (Q1), so all users share one session, checkpoint and log (G24, G36) | Move it to each user's own folder (Standard 13), keeping shared templates only if you want them shared |
 | Q13 | Are the recipient workbooks always saved by Excel itself, or exported from other software (Tally, the portal, a bank, a CRM)? | Some exported files load only their first rows (G25) | — (a fact) |
 | Q14 | Which Windows version, Python version and screen size/scale do the sending PCs have? | Tests, launcher and window size | — (a fact) |
 | Q15 | May a future `[DOCS]` change correct `README.md`, `QUICKSTART.md`, `CHANGELOG.md` and `ROADMAP.md` (audit 7.9)? | They contradict the code in places | Yes |

@@ -15,15 +15,22 @@
   03-11-2026. Not yet run on an office PC.
 - **No Build Plan** (`.build-docs/BUILD_PLAN.md` does not exist): one is written when the author asks
   for a change.
-- **Open:** business questions Q1-Q17 (end of the Brief; Q1-Q4 asked first); office-PC checks
-  (Decisions Log, Session 0, *Open*); the proposed safety-net tests T1-T7 await approval (Q17).
+- **Answered on 03-11-2026 (Q1-Q4):** the app runs from a shared folder on the office server, and the
+  sharing of its `.app_data` was never tested (G24, G36 apply); every sending PC uses classic
+  Outlook; identifiers are chosen so that none hits another client's file (no overlap check, G11
+  accepted); Resume and Retry: "Fix all three" → **Change 1** in the Brief (contracts C4 extended,
+  C15, C16) — **decided, not built**.
+- **Open:** Q5-Q17 (end of the Brief) and the unanswered halves of Q1-Q3 (how staff start the app,
+  the mailbox provider, the kinds of identifier); office-PC checks (Decisions Log, Session 0,
+  *Open*); the proposed safety-net tests T1-T7 await approval (Q17).
 
 ## Exact next action
 
-1. Record the author's answers to Q1-Q4 (asked one at a time) in the Brief and in Session 0 of the
-   Decisions Log; then Q5-Q17 whenever the author is ready.
+1. Ask Q5-Q17 one at a time whenever the author is ready; write each answer into the Brief and
+   Session 0 of the Decisions Log.
 2. The author runs the office-PC checks listed in Session 0 and reports what they saw.
-3. When the author asks for the first change (pipeline Part 3, Template 2 — Change Request):
+3. When the author asks for the first change — Change 1 (Resume and Retry made safe) is the one
+   already decided — follow pipeline Part 3, Template 2 (Change Request):
    - first update the Brief (the rule and any contract the change touches);
    - write and commit the approved safety-net tests T1-T7; they must pass on today's code;
    - then write `.build-docs/BUILD_PLAN.md` (Session 1) with the change as its first sub-phase, and run
@@ -33,6 +40,8 @@
 
 - 03-11-2026 | Adoption (Session 0) | done | Audit, CLAUDE.md, Brief, Decisions Log, RESUME_CONTEXT,
   README template copy and `context/` added on `adopt-toolkit`; no code changed; 82 tests passed (Linux).
+- 03-11-2026 | Session 0 questions Q1-Q4 | done | Answers recorded in the Brief, CLAUDE.md and the
+  Decisions Log; Change 1 (Resume and Retry) decided, not built.
 
 ## Hard-won lessons
 
