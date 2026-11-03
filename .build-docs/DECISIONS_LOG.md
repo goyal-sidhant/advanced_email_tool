@@ -136,6 +136,56 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
   19. **Q6 answered (author, 03-11-2026): "Fix both"** — Change 3 in the Brief: whatever is in the
       Universal BCC box when the emails are built goes on every email, and Preview shows each email's
       To, CC and BCC. Contracts C18, C19 — decided, **not yet built**.
+  20. **Q7 answered (author, 03-11-2026): "Replace everything"** — Change 4 in the Brief: a profile
+      replaces every setting it covers (no static files → list emptied; no folder → folder cleared;
+      missing files listed; account and other settings from the profile). Contract C20 — decided,
+      **not yet built**. To confirm when the change is planned: a profile that names no Excel file.
+  21. **Q8 answered (author, 03-11-2026): "Block, ignore case"** — Change 5 in the Brief: `{variable}`
+      names match columns ignoring capitals, and nothing goes to clients (Start, Resume, Retry) while
+      any email would contain `{MISSING}`. Contract C21 — decided, **not yet built**. To confirm when
+      the change is planned: the test email to yourself stays allowed.
+  22. **Q9 answered (author, 03-11-2026): "As shown in Excel"** — Change 6 in the Brief: every number,
+      percentage and date in an email appears as its cell displays it in Excel. Contract C22 —
+      decided, **not yet built**. Technical detail for planning: a format the app cannot reproduce
+      exactly is listed for the author, never guessed.
+  23. **Q10 — the author took the recommended answer (03-11-2026):** Change 7 in the Brief — before a run,
+      rows with a blank or invalid address (commas included) are listed and left out unless confirmed;
+      blank addresses never stop the batch. Contract C23 — decided, **not yet built**.
+  24. **Q11 — the author took the recommended answer (03-11-2026):** Change 8 — the last "Send from"
+      account is remembered; if Outlook refuses it, the email is not sent (never sent from another
+      account). Contract C24 — decided, **not yet built**.
+  25. **Q12 answered (author, 03-11-2026): "Computer's Users/Public/Advanced Email Tool"** — Change 9:
+      the app's own data moves from `.app_data` in the shared server folder to
+      `C:\Users\Public\Advanced Email Tool\` on each computer. Contract C25 — decided, **not yet
+      built**. This differs from Standard 13's per-user default (`%LOCALAPPDATA%`): the author's choice
+      is one folder per computer. To confirm when planned: templates and saved lists (move, or stay
+      shared on the server?) and the data already in `.app_data`.
+  26. **Q14 answered (author, 03-11-2026):** the sending PCs run Windows 11 (26H2) and Python 3.14.9,
+      with 1080p screens; the display scale was not stated (office-PC check 12). Recorded in the Brief
+      (Sections 2 and 7) and CLAUDE.md (Runtime).
+  27. **Q15 — the author took the recommended answer (03-11-2026):** a future `[DOCS]` change may correct
+      `README.md`, `QUICKSTART.md`, `CHANGELOG.md` and `ROADMAP.md` (audit 7.9); in the Brief's
+      Parking Lot, done when the author asks.
+  28. **Q17 — the author took the recommended answer (03-11-2026):** the safety-net tests T1-T7 are
+      approved, to be written as the first step of the first change. The `pytest.ini` and a
+      development requirements list for `pytest` will be proposed in that Build Plan.
+  29. **Q13 answered (author, 03-11-2026, four cards):** the lists are made in Excel by staff; a list from
+      another program or a download is re-saved in Excel only sometimes; some columns used in emails
+      hold formulas; some lists have duplicate headings, and some have headings below row 1. So G26
+      (a duplicate heading's earlier column vanishes) and G23 (the heading row and sheet are not
+      remembered by sessions and profiles) apply today — new business questions Q18 and Q19 in the
+      Brief; G25 and G27 stay possible for lists not re-saved in Excel.
+  30. **Q16 answered (author, 03-11-2026, four cards):** none of the twelve problems listed has been
+      noticed — wrong or re-ticked recipients, Resume or Retry mistakes; another client's file, a
+      client's own file missing, an old file re-sent; a missing BCC copy, `{MISSING}` or raw values,
+      the wrong sender account; missing rows or columns, a crash or freeze, another person's work
+      offered. One new problem seen: emails sent with client files show twice in Sent ("2" beside
+      each; two identical copies when opened), although the Outbox held each once and no client has
+      said they got two; Gmail is set up in classic Outlook. Claude read the send code and ran it
+      with a fake Outlook (3 emails → 3 items created, 3 sends): the app hands each email to Outlook
+      once. *(inferred)* The second copy most likely comes from Outlook and Gmail each keeping one;
+      a Universal BCC or CC to the sending mailbox, or Outlook's conversation view, are the other
+      candidates. Office-PC check 13 settles it. Recorded in the Brief (Sections 2 and 6, Q16).
 - **Assumptions** (technical only — they stand unless the author objects):
   - A. The project tag in file names is `advanced_email_tool` (the repository's name).
   - B. The audit and the Brief describe `main` at commit `f5b9511` (v1.8.0).
@@ -152,7 +202,8 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
     template says to when there is no design and no old screenshots.
   - H. Answers to the open questions are recorded in this Session 0 until Session 1 starts.
   - I. Markdown files use LF line endings (toolkit D23).
-- **Proposed (not yet approved) — safety-net tests.** Tests that pin what the app does **today**,
+- **Safety-net tests — approved by the author on 03-11-2026 (Q17, recommended answer taken;
+  Decided 28); written as the first step of the first change.** Tests that pin what the app does **today**,
   written before the first change and run on every change. Dummy data only (made-up clients, PANs
   such as `AAAPA1111A`, `example.com` addresses), generated by the tests in temporary folders; the
   same dummy files can also be saved in `.build-docs/context/` for the office-PC checks. Outlook is
@@ -194,8 +245,9 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
     approval): a `pytest.ini` (`pythonpath = .`, `testpaths = tests`, as Standard 13 expects) and
     `pytest` in a development requirements list.
 - **Open:**
-  - Business questions Q1-Q17 — the full list, with recommended defaults, is at the end of the
-    Brief. Asked first, one at a time: Q1-Q4 — answered 03-11-2026 (Decided 11-14).
+  - Business questions — the full list, with recommended defaults, is at the end of the Brief.
+    Q1-Q17 answered 03-11-2026 (Decided 11-30). Still open: Q18 (duplicate headings) and Q19 (the
+    heading row and sheet remembered), both from the Q13 answer, to be asked one at a time.
   - **Needs an office PC** (cannot be checked in the cloud):
     1. Run the app's tests there (`py -m pytest` in the app folder; expect 82 passed) and note the
        Windows, Python, PyQt5, pywin32 and openpyxl versions (`py -m pip list`).
@@ -220,6 +272,15 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
     11. Open one desktop shortcut's Properties and note its Target: `python.exe` (a black window
         stays open beside the app) or `pythonw.exe` (no black window — and then an unexpected error
         closes the app without any message, G35).
+    12. Note the Windows display scale on a sending PC (Settings › System › Display › Scale) and
+        check that the whole app window fits on the 1080p screen (Q14).
+    13. **Two copies in Sent (Q16).** With dummy data, send one app email with one dummy client file
+        to a colleague's address, from the usual account, and note: (a) where the "2" shows —
+        Outlook's Sent Items, or Gmail in a browser or on a phone; (b) whether the colleague got one
+        copy or two; (c) whether the Universal BCC or CC holds the sending mailbox's own address;
+        (d) whether an email typed by hand in Outlook, with an attachment, from the same account,
+        also shows "2"; (e) whether one app email with no attachment, and one from a Microsoft 365
+        mailbox, show "2". One copy in (b) and a "2" in (d) mean Outlook and Gmail, not the app.
 - **Exchanges:**
 
 #### 03-11-2026 | Session 0 | Message 1
@@ -285,6 +346,43 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
 - **Decided/Built:** Change 3 (C18, C19) recorded in the Brief and here (Decided 19). Not built.
 - **Open:** Q7 next. (The session's worker restarted before this answer; all earlier edits were
   checked and found intact.)
+
+#### 03-11-2026 | Session 0 | Message 11
+- **Discussed:** Q7 — a loaded profile keeps the previous campaign's static files and folder (G22).
+- **Decided/Built:** Change 4 (C20) recorded in the Brief and here (Decided 20). Not built.
+- **Open:** Q8 next.
+
+#### 03-11-2026 | Session 0 | Message 12
+- **Discussed:** Q8 — `{MISSING}` reaching clients; case-sensitive variable names (G31).
+- **Decided/Built:** Change 5 (C21) recorded in the Brief and here (Decided 21). Not built.
+- **Open:** Q9 next.
+
+#### 03-11-2026 | Session 0 | Message 13
+- **Discussed:** Q9 — raw numbers and dates in emails (G32).
+- **Decided/Built:** Change 6 (C22) recorded in the Brief and here (Decided 22). Not built.
+- **Open:** Q10 next.
+
+#### 03-11-2026 | Session 0 | Message 14
+- **Discussed:** The author's message: take the recommended answers for Q10, Q11, Q15 and Q17;
+  Q12 = the computer's Users/Public/Advanced Email Tool folder; Q14 = Windows 11 (26H2), Python 3.14.9,
+  1080p screens; ask Q13 and Q16 in detail as question cards.
+- **Decided/Built:** Changes 7-9 (contracts C23-C25), Q14 facts, Q15 docs approval and Q17 test
+  approval recorded in the Brief, CLAUDE.md and here (Decided 23-28); office-PC check 12 added.
+- **Open:** Q13 and Q16, asked next as detailed cards.
+
+#### 03-11-2026 | Session 0 | Message 15
+- **Discussed:** Q13 in detail (sources, re-saving, formulas, headings).
+- **Decided/Built:** Answers recorded in the Brief (Sections 2, 3, 6, Q13) and here (Decided 29);
+  new questions Q18 (duplicate headings) and Q19 (heading row and sheet remembered) added.
+- **Open:** Q16 next, as detailed cards; then Q18 and Q19.
+
+#### 03-11-2026 | Session 0 | Message 16
+- **Discussed:** Q16 in detail (four cards: recipients, attachments, content and sender, other). The
+  author described emails showing twice in Sent and asked whether Outlook, the app or Gmail causes it.
+- **Decided/Built:** Answer recorded in the Brief (Sections 2 and 6, Q16), CLAUDE.md (Tech Stack) and
+  here (Decided 30); the send code checked with a fake Outlook (one send per email); office-PC check
+  13 added; CLAUDE.md *Current Phase* and RESUME_CONTEXT brought up to date.
+- **Open:** Q18 and Q19 (from the Q13 answer); the office-PC checks.
 
 ---
 

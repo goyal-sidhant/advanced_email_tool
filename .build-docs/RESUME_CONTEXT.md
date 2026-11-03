@@ -15,26 +15,46 @@
   03-11-2026. Not yet run on an office PC.
 - **No Build Plan** (`.build-docs/BUILD_PLAN.md` does not exist): one is written when the author asks
   for a change.
-- **Answered on 03-11-2026 (Q1-Q4):** the app runs from a shared folder on the office server, and the
-  sharing of its `.app_data` was never tested (G24, G36 apply); every sending PC uses classic
-  Outlook; identifiers are chosen so that none hits another client's file (no overlap check, G11
-  accepted); Resume and Retry: "Fix all three" → **Change 1** in the Brief (contracts C4 extended,
-  C15, C16) — **decided, not built**.
-- **Also answered on 03-11-2026:** Q1a (desktop shortcut), Q2a (a mix of Microsoft 365 and other
-  mailboxes), Q3a (client codes), Q5 (Change 2: Refresh keeps the ticks, by email; session restore
-  unchanged), Q6 (Change 3: the Universal BCC always applies; Preview shows CC and BCC) — Decisions
-  Log, Decided 15-19.
-- **Open:** Q7-Q17 (end of the Brief); office-PC checks (Decisions Log, Session 0, *Open*); the
-  proposed safety-net tests T1-T7 await approval (Q17).
+- **Questions Q1-Q17 answered on 03-11-2026** (Brief Section 10; Decisions Log, Session 0, Decided
+  11-30). In short:
+  - the app runs from a shared folder on the office server, started from a desktop shortcut on each
+    PC; the sharing of its `.app_data` was never tested (G24, G36 apply);
+  - every sending PC uses classic Outlook; the mailboxes are a mix of Microsoft 365 and other
+    providers, Gmail among them; the PCs run Windows 11 (26H2) and Python 3.14.9, with 1080p screens;
+  - identifiers are client codes, chosen so that none hits another client's file (no overlap check:
+    G11 accepted); session restore by row number stays as it is (G20 accepted);
+  - the recipient lists are made in Excel by staff; some have duplicate headings or headings below
+    row 1 (G26 and G23 apply);
+  - none of the audit's listed problems has been noticed in use (Q16). One new one has: emails sent
+    with client files show twice in Sent. The app sends each email once (checked with a fake
+    Outlook), so it is probably Outlook and Gmail each keeping a copy *(inferred — office-PC
+    check 13)*;
+  - the safety-net tests T1-T7 are approved (Q17); a future `[DOCS]` change may correct the README
+    and the other user documents (Q15).
+- **Decided, not built — Changes 1-9** (Brief Section 5; contracts C4 extended and C15-C25):
+  1. Resume and Retry ask first, refuse another file or other clients, and never count Preview mode
+     as sent;
+  2. Excel Refresh keeps the hand-picked ticks, by email address;
+  3. the Universal BCC always applies, and Preview shows CC and BCC;
+  4. loading a profile replaces everything it covers;
+  5. sending is blocked while any `{MISSING}` remains, and `{variables}` ignore capitals;
+  6. numbers and dates appear as Excel shows them;
+  7. blank or invalid addresses are listed before sending and left out unless confirmed;
+  8. the "Send from" account is remembered, and a refused account means not sent;
+  9. the app's own data moves to `C:\Users\Public\Advanced Email Tool\` on each computer.
+  The points marked "to confirm when planned" in the Brief are asked at that change's .1 Plan.
+- **Open:** Q18 (two columns with the same heading) and Q19 (the heading row and sheet remembered),
+  at the end of the Brief; the office-PC checks (Decisions Log, Session 0, *Open*: checks 1-13,
+  check 8 answered).
 
 ## Exact next action
 
-1. Ask Q5-Q17 one at a time whenever the author is ready; write each answer into the Brief and
+1. Ask Q18 and Q19 one at a time whenever the author is ready; write each answer into the Brief and
    Session 0 of the Decisions Log.
 2. The author runs the office-PC checks listed in Session 0 and reports what they saw.
-3. When the author asks for the first change — Change 1 (Resume and Retry made safe) is the one
-   already decided — follow pipeline Part 3, Template 2 (Change Request):
-   - first update the Brief (the rule and any contract the change touches);
+3. When the author asks for the first change, follow pipeline Part 3, Template 2 (Change Request):
+   - first update the Brief (the rule and any contract the change touches), asking the "to confirm
+     when planned" points that belong to that change;
    - write and commit the approved safety-net tests T1-T7; they must pass on today's code;
    - then write `.build-docs/BUILD_PLAN.md` (Session 1) with the change as its first sub-phase, and run
      it through the Build Loop in CLAUDE.md — one step per "next".
@@ -45,6 +65,10 @@
   README template copy and `context/` added on `adopt-toolkit`; no code changed; 82 tests passed (Linux).
 - 03-11-2026 | Session 0 questions Q1-Q4 | done | Answers recorded in the Brief, CLAUDE.md and the
   Decisions Log; Change 1 (Resume and Retry) decided, not built.
+- 03-11-2026 | Session 0 questions Q1a-Q3a, Q5, Q6 | done | Answers recorded; Changes 2 and 3
+  decided, not built.
+- 03-11-2026 | Session 0 questions Q7-Q17 | done | Answers recorded in the Brief, CLAUDE.md and the
+  Decisions Log; Changes 4-9 decided, not built; Q18 and Q19 added; office-PC checks 12 and 13 added.
 
 ## Hard-won lessons
 
@@ -74,3 +98,6 @@ From the git history (each was a real failure in use) and from the adoption audi
     ignored by git; run them in a copy when the working folder must stay untouched.
 11. **This cloud session cannot open the window, Outlook, Excel or the office share.** Anything that
     depends on them is an office-PC check; dummy data only, never real client files.
+12. **One `Send()` per email.** `core/outlook_sender.py` hands each email to Outlook once and never
+    again, except through Resume or Retry. A double copy in Sent therefore starts with office-PC
+    check 13, not with the app's code (Q16).

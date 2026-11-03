@@ -18,8 +18,8 @@
 > my reading of intent or of how the office uses the app — please confirm or correct it.
 >
 > Numbers used below: features **F1–F25** (audit Section 3), rules **R1–R46** (audit Section 5), gaps
-> **G1–G41** (audit Section 7), Contracts **C1–C16** (Section 5 below; C15-C16 decided, not yet
-> built), questions **Q1–Q17** (end).
+> **G1–G41** (audit Section 7), Contracts **C1–C25** (Section 5 below; "C4 extended" and C15-C25 are
+> decided, not yet built), questions **Q1–Q19** (end).
 
 ---
 
@@ -55,9 +55,14 @@ mailbox, keeping track so an interrupted run can continue.
   check 11).
 - **Mail program (your answer to Q2, 03-11-2026):** every PC that sends uses **classic Outlook**.
   The mailboxes are **a mix**: some on Microsoft 365, some on other providers (your answer to Q2a,
-  03-11-2026). Today this changes nothing (the app sends through Outlook whatever the service); it
+  03-11-2026), Gmail among them (Q16). Today this changes nothing (the app sends through Outlook whatever the service); it
   would matter only if Outlook had to be replaced — Microsoft Graph for the Microsoft 365
   mailboxes, the provider's own mail server (SMTP) for the others (Standard 12).
+- **The sending PCs (your answer to Q14, 03-11-2026):** Windows 11 (26H2), Python 3.14.9, 1080p screens.
+- **The recipient lists (your answers to Q13, 03-11-2026):** made in Excel by staff; a list that comes
+  from another program or a download is re-saved in Excel only *sometimes*; some columns used in
+  emails hold **formulas**; some lists have **two columns with the same heading**, and some have their
+  **headings below row 1**.
 
 ---
 
@@ -69,11 +74,11 @@ notes name the gaps that are still candidates; each needs your decision.
 
 | Feature | Audit Ref | Decision | Notes |
 |---------|-----------|----------|-------|
-| Load the recipient Excel file | F1 | KEEP AS-IS | Never locks or changes the file. Gaps: G23, G25-G27, G29 |
+| Load the recipient Excel file | F1 | KEEP AS-IS | Never locks or changes the file. Known to apply (Q13): G26 duplicate headings (Q18), G23 heading row not remembered (Q19). Possible: G25, G27, G29 |
 | Map columns (To, CC, BCC, Identifier 1/2, AND/OR) | F2 | KEEP AS-IS | Gap: G28 (auto-detection can pick the wrong column) |
-| Check email addresses | F3 | KEEP AS-IS | Shows problems, never blocks (Q10) |
+| Check email addresses | F3 | KEEP BUT IMPROVE | **Decided (Q10): Change 7** — blank and invalid addresses listed before sending and left out unless you confirm (G6). Not yet built |
 | Export a blank Excel template | F4 | KEEP AS-IS | — |
-| Compose with `{Column}` variables | F5 | KEEP AS-IS | Gaps: G31 (`{MISSING}` can be sent), G32 (number/date formats), G33 |
+| Compose with `{Column}` variables | F5 | KEEP BUT IMPROVE | **Decided (Q8): Change 5** — nothing is sent while `{MISSING}` remains; variable names ignore capitals (G31). **Decided (Q9): Change 6** — numbers and dates as Excel shows them (G32). Both not yet built. Still open: G33 |
 | Paste Excel tables, insert images | F6 | KEEP AS-IS | Gap: G34 |
 | Import body from .docx/.txt/.html | F7 | KEEP AS-IS | Paragraph text only |
 | Email templates | F8 | KEEP AS-IS | Names that differ only in symbols share one file |
@@ -85,14 +90,14 @@ notes name the gaps that are still candidates; each needs your decision.
 | Saved recipient lists | F14 | KEEP AS-IS | Follow clients by email (C9) |
 | Preview each email | F15 | KEEP BUT IMPROVE | **Decided (Q6): Change 3** — Preview shows each email's CC and BCC. Not yet built |
 | Connect to Outlook | F16 | KEEP AS-IS | Classic Outlook only (G37, Q2) |
-| Send the batch | F17 | KEEP AS-IS | Gaps: G5-G10, G41 |
+| Send the batch | F17 | KEEP BUT IMPROVE | **Decided: Change 7 (Q10)** — blank rows never stop the batch; **Change 8 (Q11)** — the chosen account is remembered and never swapped (G6, G7). Not yet built. Still open: G5, G8-G10, G41 |
 | Test email to yourself | F18 | KEEP AS-IS | Clears CC/BCC, so it cannot show the BCC |
 | Checkpoint, Resume, Retry failed | F19 | KEEP BUT IMPROVE | **Decided (Q4): Change 1** — Resume/Retry ask first; Resume only on the same file and clients (by email); Preview mode never counts as sent (G1-G3). Not yet built |
-| Session auto-save and restore | F20 | KEEP AS-IS | G20 (ticks restored by row number) kept by your decision (Q5); still open: G21, G23, G24 |
-| Profiles | F21 | KEEP AS-IS | **G22: keeps the previous campaign's static files** (Q7) |
-| Remembered folders and window | F22 | KEEP AS-IS | — |
+| Session auto-save and restore | F20 | KEEP BUT IMPROVE | G20 (ticks restored by row number) kept by your decision (Q5); the session moves to each computer — **Change 9 (Q12)**, not yet built (G24); still open: G21, G23 |
+| Profiles | F21 | KEEP BUT IMPROVE | **Decided (Q7): Change 4** — a profile replaces everything it covers (G22). Not yet built |
+| Remembered folders and window | F22 | KEEP BUT IMPROVE | Preferences move to each computer — **Change 9 (Q12)**; the Send from account is remembered too — **Change 8 (Q11)**. Not yet built |
 | Theme (system / light / dark) | F23 | KEEP AS-IS | Old look kept (Standard 14 exception for apps kept on PyQt5) |
-| Log file | F24 | KEEP AS-IS | Contains client addresses; lives in the app folder (G36) |
+| Log file | F24 | KEEP BUT IMPROVE | Contains client addresses; moves out of the shared folder to each computer — **Change 9 (Q12)** (G36). Not yet built |
 | Navigation, shortcuts, checkmarks | F25 | KEEP AS-IS | — |
 
 ---
@@ -120,10 +125,12 @@ whose fix would change them — whether to change them is a question at the end.
   `core/validators.py`, lines 64-74; `core/email_builder.py`, lines 315-332)
 - R3 — Typo suggestions for 17 common misspelt domains (gmial.com → gmail.com …) — (Audit:
   `config.py`, lines 65-83)
-- ⚠ R4 — Invalid or blank addresses are shown but never blocked (G6, Q10) — (Audit:
+- ⚠ R4 — Invalid or blank addresses are shown but never blocked (G6) — **to change: Change 7
+  (Q10)** — (Audit:
   `ui/tab_excel.py`, lines 611-620; `ui/tab_send.py`, lines 582-614)
 - ⚠ R5 — To, CC and BCC column names are matched ignoring case; identifier columns and `{variables}`
-  are case-sensitive (G13, G31, Q8) — (Audit: `core/email_builder.py`, lines 221-236 and 270-276;
+  are case-sensitive (G13, G31) — **`{variables}` to change: Change 5 (Q8)**; identifier columns stay
+  case-sensitive for now (G13) — (Audit: `core/email_builder.py`, lines 221-236 and 270-276;
   `core/template_engine.py`, line 80)
 - ⚠ R6 — Universal BCC is added to every email unless already in that row's BCC — but an address
   typed in the box after the subject and body is ignored (G4) — **to change: Change 3 (Q6)** — (Audit:
@@ -148,9 +155,9 @@ whose fix would change them — whether to change them is a question at the end.
 **Templates**
 - R16 — A variable is `{` + text without `{ } : ;` + `}` — (Audit: `core/template_engine.py`, line 28)
 - ⚠ R17 — Values are inserted as plain text of the stored value: 150000, 0.18, 2026-04-01 00:00:00
-  (G32, Q9) — (Audit: `core/template_engine.py`, lines 80-85)
-- ⚠ R18 — An unknown variable becomes the text `{MISSING}` and the email still goes (G31, Q8) —
-  (Audit: `core/template_engine.py`, lines 56 and 86-88)
+  (G32) — **to change: Change 6 (Q9)** — (Audit: `core/template_engine.py`, lines 80-85)
+- ⚠ R18 — An unknown variable becomes the text `{MISSING}` and the email still goes (G31) — **to
+  change: Change 5 (Q8)** — (Audit: `core/template_engine.py`, lines 56 and 86-88)
 - R21 — Template and list names keep only letters, digits, space, "-", "_" (50 characters) — (Audit:
   `data/template_storage.py`, lines 49-52)
 
@@ -174,7 +181,8 @@ whose fix would change them — whether to change them is a question at the end.
   Change 1 (Q4)** — (Audit: `ui/tab_send.py`, lines 592-600, 667-696, 777-800)
 - R30 — Delay between emails: default 1 s, choice 1-30 s — (Audit: `ui/tab_send.py`, lines 224-226)
 - R31 — Cancel never asks; stops within about 0.1 s — (Audit: `ui/tab_send.py`, lines 653-665)
-- R32 — The batch stops after 3 failures in a row — (Audit: `core/outlook_sender.py`, line 438)
+- R32 — The batch stops after 3 failures in a row; blank addresses will no longer count (Change 7) —
+  (Audit: `core/outlook_sender.py`, line 438)
 - R33 — A cancelled or self-stopped run stays resumable; a finished run is closed even with
   failures — (Audit: `ui/tab_send.py`, lines 728-733)
 - ⚠ R34 — Resume sends planned rows not marked sent or failed, matched **by row number** (G1);
@@ -183,14 +191,16 @@ whose fix would change them — whether to change them is a question at the end.
 - ⚠ R35 — Preview mode opens each email in Outlook and is recorded as if sent (G3) — **to change:
   Change 1 (Q4)** — (Audit: `ui/tab_send.py`, lines 65-73)
 - ⚠ R36 — Sends from the account chosen in "Send from"; at each start the first Outlook account; if
-  setting it fails, the default account is used with only a log warning (G7, Q11) — (Audit:
+  setting it fails, the default account is used with only a log warning (G7) — **to change: Change 8
+  (Q11)** — (Audit:
   `core/outlook_sender.py`, lines 177-179 and 309-318)
 
 **Saving state**
 - R39 — Auto-save every 3 minutes (not while sending) and on close — (Audit: `config.py`, line 56)
 - R41 — Session, checkpoint, lists and preferences are written atomically — (Audit:
   `utils/file_utils.py`, lines 16-29)
-- ⚠ R42 — All user data in `.app_data` inside the app's folder (G24, G36, Q1, Q12) — (Audit:
+- ⚠ R42 — All user data in `.app_data` inside the app's folder (G24, G36, Q1) — **to change: Change 9
+  (Q12)** — (Audit:
   `config.py`, lines 20-31)
 
 The full list (R1-R46, including window sizes and message limits) is in audit Section 5.
@@ -229,6 +239,72 @@ The full list (R1-R46, including window sizes and message limits) is in audit Se
     (unless that row's own BCC already has it), and the Preview tab shows each email's To, CC and BCC
     exactly as they will be sent.
   - **Why:** G4 reproduced on dummy data — emails were built with no BCC copy.
+
+- **Change 4 — Loading a profile replaces everything it covers** (your answer to Q7, 03-11-2026:
+  "Replace everything")
+  - **Old rule:** a profile replaces the static attachments only if at least one of its files still
+    exists, and the attachments folder only if it has one, so the previous campaign's files and folder
+    stay behind (G22); the sending account saved in a profile is never applied (G7).
+  - **New rule:** a profile replaces every setting it covers: no static files in the profile empties the
+    list, no folder clears the folder, and every listed file that is missing is shown to you; the other
+    settings it covers (mapping, subject, body, BCC, switches, account) come from the profile too.
+    *To confirm when the change is planned: what happens when the profile names no Excel file.*
+  - **Why:** G22 reproduced on dummy data — last month's notice stayed attached for every recipient.
+
+- **Change 5 — No `{MISSING}` ever reaches a client; variable names ignore capitals** (your answer
+  to Q8, 03-11-2026: "Block, ignore case")
+  - **Old rules:** a `{variable}` must match its column name exactly, capitals included (R5); an
+    unmatched one is sent as the text `{MISSING}`, and the warning line under the editor never stops
+    the send (R18, G31).
+  - **New rules:** `{name}` matches a column "Name" — capital letters are ignored, as they already are
+    for the To/CC/BCC columns; and while any email would still contain `{MISSING}`, nothing goes to
+    clients — Start Sending, Resume and Retry are blocked, with the emails and variables listed.
+    *To confirm when the change is planned: the test email to yourself stays allowed, so you can see
+    the problem.*
+  - **Why:** G31 reproduced on dummy data — "Dear {MISSING}".
+
+- **Change 6 — Numbers and dates appear as Excel shows them** (your answer to Q9, 03-11-2026:
+  "As shown in Excel")
+  - **Old rule:** a `{Column}` holding a number or date is inserted as its raw stored value — 150000,
+    0.18, 2026-04-01 00:00:00, even 1234.5600000000002 (R17, G32).
+  - **New rule:** every value appears exactly as its cell displays it in Excel — 1,50,000.00 · 18% ·
+    01-04-2026 — so the look is set in the workbook. *To settle when the change is planned (a technical
+    detail): a cell format the app cannot reproduce exactly is listed for you to decide, never guessed.*
+  - **Why:** G32 reproduced on dummy data.
+
+- **Change 7 — Blank or invalid addresses are listed before sending and left out** (Q10: you took the
+  recommended answer, 03-11-2026)
+  - **Old rules:** invalid and blank addresses are only marked on the Excel tab and still go to Outlook
+    (R4); three blank ones in a row stop the whole batch with "Outlook may be unavailable" (R32, G6);
+    "a@x.com, b@x.com" (a comma instead of ";") goes to Outlook as one address.
+  - **New rule:** before a run (Start, Resume, Retry), every selected row with a blank or invalid
+    address — commas instead of ";" included — is listed; those rows are left out of the run unless you
+    confirm them; a blank address never counts towards the "3 failures in a row" stop.
+  - **Why:** G6 reproduced on dummy data.
+
+- **Change 8 — The "Send from" account is remembered and never silently swapped** (Q11: you took the
+  recommended answer, 03-11-2026)
+  - **Old rule:** each start selects the first Outlook account; if Outlook refuses the chosen account,
+    the email goes from the default account with only a note in the log (R36, G7).
+  - **New rule:** the app remembers the last "Send from" account and selects it at start; if Outlook
+    refuses the chosen account, that email is not sent and fails with a clear message — it is never
+    sent from another account.
+  - **Why:** G7 — a client could get the email from the wrong mailbox without anyone noticing.
+
+- **Change 9 — The app's own data moves to each computer: `C:\Users\Public\Advanced Email Tool\`**
+  (your answer to Q12, 03-11-2026)
+  - **Old rule:** sessions, the send checkpoint, templates, saved lists, preferences and the log live in
+    `.app_data` inside the app's folder — the shared server folder — so every user shares them, never
+    tested (R42, G24, G36).
+  - **New rule:** the app keeps them in `C:\Users\Public\Advanced Email Tool\` on each computer — a folder
+    every Windows user of that PC can reach — and no longer writes them into the shared server folder.
+    *To confirm when the change is planned: (a) whether templates and saved recipient lists move too
+    (each PC then has its own) or stay shared in the server folder; (b) what happens to the data
+    already in `.app_data`.*
+  - **Note:** Standard 13's default is each Windows user's own folder (`%LOCALAPPDATA%`); your choice
+    is one folder per computer, so people who share a PC also share its session and checkpoint.
+  - **Why:** G24, G36 — the shared data was never tested, and one user could be offered another
+    user's run to resume.
 
 The other candidate changes are the remaining ⚠ rules above; each one is a question at the end.
 
@@ -297,6 +373,20 @@ until then the safety-net tests pin today's behaviour, and the Change Request re
 - **C18** — Every email carries the Universal BCC exactly as it stands in the box when the emails are
   built (unless that row's own BCC already has it). *(Change 3.)*
 - **C19** — Preview shows each email's To, CC and BCC exactly as they will be sent. *(Change 3.)*
+- **C20** — After a profile is loaded, the static attachments and the attachments folder are exactly
+  the profile's (an empty list or no folder clears them); nothing is kept from the previous campaign,
+  and missing files are listed. *(Change 4.)*
+- **C21** — No email goes to a client while any email of the run would contain `{MISSING}`; a
+  `{variable}` matches its column whatever the capital letters. *(Change 5.)*
+- **C22** — Every number, percentage and date inserted into an email appears as its cell displays it in
+  Excel. *(Change 6.)*
+- **C23** — Before a run, every selected row with a blank or invalid address is listed and left out
+  unless you confirm it; a blank address never stops the batch. *(Change 7.)*
+- **C24** — Every email goes from the "Send from" account chosen for the run, or is not sent at all; the
+  last choice is remembered. *(Change 8.)*
+- **C25** — Sessions, the send checkpoint, preferences and the log are kept only in
+  `C:\Users\Public\Advanced Email Tool\` on each computer — never in the shared server folder
+  (templates and saved lists: as settled when the change is planned). *(Change 9.)*
 
 ---
 
@@ -327,18 +417,45 @@ Reference audit Sections 6 and 7.
 - Text files in UTF-8, UTF-8-BOM, cp1252 or Latin-1.
 
 ### Must handle (were NOT handled — gaps from Section 7 that bit you):
-*Which of these have actually happened is question Q16. Found by the audit (HIGH first):*
+*Found by the audit (HIGH first). Asked which have actually happened (Q16, 03-11-2026, four cards
+of three problems each): none that anyone has noticed. Several of them fail silently (G14, G22,
+G26, G41), so "not noticed" does not prove "never happened". The one problem seen in use is new:
+see "Seen in use" after this list.*
 - G1-G3 — Resume/Retry without confirmation; Resume can hit another file's rows; Preview mode
   counts as sent — **decided: Change 1 (Q4)**, not yet built.
 - G4 — Universal BCC typed last is ignored — **decided: Change 3 (Q6)**, not yet built.
 - G14, G41 — stale "no files" after a Rescan; missing client files hidden by static files.
 - G19 — Refresh re-selects everyone — **decided: Change 2 (Q5)**, not yet built.
-- G22 — a profile keeps the previous campaign's static files.
-- G25 — some exported workbooks load only their first rows.
-- G31 — `{MISSING}` sent to clients.
-- G24, G36 — shared `.app_data`: **known to apply** (the app runs from a shared server folder, Q1).
+- G22 — a profile keeps the previous campaign's static files — **decided: Change 4 (Q7)**, not yet
+  built.
+- G26 — two columns with the same heading: the earlier one's values vanish — **known to apply**
+  (Q13), though no missing column has been noticed (Q16); how to handle it is question Q18.
+- G23 — the heading row ("Data starts at Row") and the sheet are not remembered by sessions and
+  profiles — **known to apply** (Q13); question Q19.
+- G25, G27 — a list that was never saved by Excel can load only its first rows, and its formulas read
+  as blank: possible, because such lists are re-saved in Excel only sometimes (Q13).
+- G31 — `{MISSING}` sent to clients — **decided: Change 5 (Q8)**, not yet built.
+- G32 — numbers and dates lose Excel's formatting — **decided: Change 6 (Q9)**, not yet built.
+- G24, G36 — shared `.app_data`: known to apply (Q1), though no one has yet been offered another
+  person's work (Q16) — **decided: Change 9 (Q12)**, not yet built.
+- G6 — blank or invalid addresses reach Outlook — **decided: Change 7 (Q10)**, not yet built.
+- G7 — the Send from account forgotten or silently swapped — **decided: Change 8 (Q11)**, not yet
+  built.
 - G37 — classic Outlook only: every sending PC uses it today (Q2), so this is a future risk — it
   would bite only if a PC moved to New Outlook.
+
+*Seen in use (Q16, 03-11-2026) — not one of the audit's gaps, and probably not the app:*
+- **Emails sent with client files show twice in Sent.** A "2" appears beside each one, and opening
+  it shows two identical copies, although the Outbox held it once. No client has ever said they got
+  two. Gmail is one of the accounts set up in classic Outlook. The app hands each email to Outlook
+  once: one `Send()` per email, and nothing sends it again except Resume or Retry (code read:
+  `core/outlook_sender.py`, line 363; checked with a fake Outlook on 03-11-2026 — 3 emails, 3 items
+  created, 3 sends). *(inferred, not confirmed)* The likely causes, most likely first: Outlook and
+  the Gmail account each keep a copy (Gmail's server files every email it sends in "Sent Mail",
+  and classic Outlook can upload its own copy to the same folder); a Universal BCC or CC to the
+  sending mailbox itself, which Gmail shows in the same conversation; or Outlook's conversation
+  view counting two items. Office-PC check 13 (Decisions Log, Session 0) settles it. If the app
+  turns out to be the cause, it comes back to you as a question.
 
 ### Not worth handling (over-engineering for my use case):
 - **G11 — identifiers contained in other identifiers** (`101` inside `1010`): decided not worth a
@@ -372,7 +489,10 @@ email during a batch).
 - **States to draw:** none (no new design).
 - **Words:** the app's own words — Identifier, Static / Variable attachments, Recipients, Profile,
   Resume Previous, Retry Failed.
-- **PCs:** *(unknown — Q14)*; the window needs at least 900 × 600 and opens at 1100 × 750.
+- **PCs:** Windows 11 (26H2) with 1080p (1920 × 1080) screens (your answer to Q14); the Windows display
+  scale was not stated. The window needs at least 900 × 600 and opens at 1100 × 750 — at 150 % scale
+  a 1080p screen leaves only about 640 px of height, so check that the whole window fits (office-PC
+  check 12).
 - **Sample data for the design:** dummy data only, in `.build-docs/context/`.
 - **Animations:** none.
 - **Approved design:** Screens unchanged: no design.
@@ -392,6 +512,7 @@ Ideas already parked in the app's own `ROADMAP.md` (lines 185-196 and 222), carr
 
 | Idea | When it came up | Priority | Status |
 |------|----------------|----------|--------|
+| Correct `README.md`, `QUICKSTART.md`, `CHANGELOG.md`, `ROADMAP.md` (audit 7.9) | 03-11-2026 (Q15) | — | **Approved** — a `[DOCS]` change, done when you ask |
 | Create a standalone .exe (PyInstaller) | January 2026 (`ROADMAP.md:131-151`) | — | Parked by you (`ROADMAP.md:222`) |
 | Dynamic images per recipient | January 2026 | Maybe someday | "No current use case" |
 | Merge several Excel sheets | January 2026 | Maybe someday | "Not requested" |
@@ -408,7 +529,8 @@ Ideas already parked in the app's own `ROADMAP.md` (lines 185-196 and 222), carr
 
 Business questions are asked one at a time, in plain English, with a recommended default (Build Loop
 rule 3). Each answer is written back into this Brief — as a rule, a contract or an edge case — and
-into the Decisions Log. **Asked first:** Q1-Q4 — answered on 03-11-2026.
+into the Decisions Log. **Asked first:** Q1-Q4 — answered on 03-11-2026; Q5-Q17 were answered the
+same day. **Still open:** Q18 and Q19, which came from the answer to Q13.
 
 | # | Question | Why it matters | Recommended default |
 |---|---|---|---|
@@ -418,14 +540,16 @@ into the Decisions Log. **Asked first:** Q1-Q4 — answered on 03-11-2026.
 | Q4 | Should Resume and Retry Failed ask before sending, refuse when the Excel file or recipients differ from the interrupted run, and never treat Preview mode as sent? | Today they send at once, by row number, and Preview-mode emails count as sent (G1-G3) | **Answered 03-11-2026:** fix all three → Change 1 (Section 5), contracts C4 (extended), C15, C16. Not yet built |
 | Q5 | When you click Excel Refresh, or restore a session, should your hand-picked selection be kept by client (email), like saved lists? | Today Refresh ticks everyone again and restore ticks by row number (G19, G20) | **Answered 03-11-2026:** only fix Refresh, matching by email address → Change 2, contract C17. Session restore stays as it is (G20). Not yet built |
 | Q6 | Should the Universal BCC always apply exactly as typed, and should Preview show CC and BCC? | A BCC typed last is silently ignored (G4) | **Answered 03-11-2026:** fix both → Change 3, contracts C18, C19. Not yet built |
-| Q7 | When you load a profile, should it replace every setting it covers — clearing static files and the folder when the profile has none? | Today the previous campaign's static files stay (G22) | Yes, replace everything |
-| Q8 | Should Start Sending be blocked while any email still contains `{MISSING}`? Should `{name}` match a column "Name" (ignore case)? | Clients can receive `{MISSING}` (G31) | Block; ignore case |
-| Q9 | Do your templates use amounts, percentages or dates? How should they appear (e.g. 1,50,000.00; 18%; 01-04-2026)? | Today: 150000, 0.18, 2026-04-01 00:00:00 (G32) | Show values as formatted in Excel |
-| Q10 | Rows with a blank or invalid address: list them before sending and leave them out, or send anyway? | Today they reach Outlook; three blank rows in a row stop the batch (G6) | List them and leave them out unless you confirm |
-| Q11 | Should the app remember the last "Send from" account, and stop (rather than use the default account) if Outlook refuses it? | Today each start picks the first account; a refused account falls back silently (G7) | Remember it; stop if refused |
-| Q12 | Keep user data in `.app_data` inside the app's folder, or move it to each user's own folder (Standard 13)? | The folder is shared (Q1), so all users share one session, checkpoint and log (G24, G36) | Move it to each user's own folder (Standard 13), keeping shared templates only if you want them shared |
-| Q13 | Are the recipient workbooks always saved by Excel itself, or exported from other software (Tally, the portal, a bank, a CRM)? | Some exported files load only their first rows (G25) | — (a fact) |
-| Q14 | Which Windows version, Python version and screen size/scale do the sending PCs have? | Tests, launcher and window size | — (a fact) |
-| Q15 | May a future `[DOCS]` change correct `README.md`, `QUICKSTART.md`, `CHANGELOG.md` and `ROADMAP.md` (audit 7.9)? | They contradict the code in places | Yes |
-| Q16 | Which of the audit's gaps have actually happened to you? | Goes into Section 6 above | — (a fact) |
-| Q17 | Approve the proposed safety-net tests (Decisions Log, Session 0, Proposed) so they are written before the first change? | They pin today's behaviour so a change cannot alter it unnoticed | Approve; write them as the first step of the first change |
+| Q7 | When you load a profile, should it replace every setting it covers — clearing static files and the folder when the profile has none? | Today the previous campaign's static files stay (G22) | **Answered 03-11-2026:** replace everything → Change 4, contract C20. Not yet built |
+| Q8 | Should Start Sending be blocked while any email still contains `{MISSING}`? Should `{name}` match a column "Name" (ignore case)? | Clients can receive `{MISSING}` (G31) | **Answered 03-11-2026:** block, ignore case → Change 5, contract C21. Not yet built |
+| Q9 | Do your templates use amounts, percentages or dates? How should they appear (e.g. 1,50,000.00; 18%; 01-04-2026)? | Today: 150000, 0.18, 2026-04-01 00:00:00 (G32) | **Answered 03-11-2026:** as shown in Excel → Change 6, contract C22. Not yet built |
+| Q10 | Rows with a blank or invalid address: list them before sending and leave them out, or send anyway? | Today they reach Outlook; three blank rows in a row stop the batch (G6) | **Answered 03-11-2026 (recommended answer taken):** list them and leave them out unless you confirm → Change 7, contract C23. Not yet built |
+| Q11 | Should the app remember the last "Send from" account, and stop (rather than use the default account) if Outlook refuses it? | Today each start picks the first account; a refused account falls back silently (G7) | **Answered 03-11-2026 (recommended answer taken):** remember it; stop if refused → Change 8, contract C24. Not yet built |
+| Q12 | Keep user data in `.app_data` inside the app's folder, or move it to each user's own folder (Standard 13)? | The folder is shared (Q1), so all users share one session, checkpoint and log (G24, G36) | **Answered 03-11-2026:** move it to `C:\Users\Public\Advanced Email Tool` on each computer → Change 9, contract C25. Not yet built. *To confirm when planned: templates and saved lists; the data already in `.app_data`* |
+| Q13 | Are the recipient workbooks always saved by Excel itself, or exported from other software (Tally, the portal, a bank, a CRM)? | Some exported files load only their first rows (G25) | **Answered 03-11-2026:** made in Excel by staff; lists from other programs re-saved in Excel only sometimes; some formulas; duplicate headings and headings below row 1 both happen → G26 and G23 apply (new questions Q18, Q19); G25 and G27 stay possible |
+| Q14 | Which Windows version, Python version and screen size/scale do the sending PCs have? | Tests, launcher and window size | **Answered 03-11-2026:** Windows 11 (26H2), Python 3.14.9, 1080p screens. *The Windows display scale was not stated (office-PC check 12)* |
+| Q15 | May a future `[DOCS]` change correct `README.md`, `QUICKSTART.md`, `CHANGELOG.md` and `ROADMAP.md` (audit 7.9)? | They contradict the code in places | **Answered 03-11-2026 (recommended answer taken):** yes — a `[DOCS]` change, done when you ask (Parking Lot) |
+| Q16 | Which of the audit's gaps have actually happened to you? | Goes into Section 6 above | **Answered 03-11-2026 (four cards):** none of the twelve problems listed has been noticed. One new problem seen: emails sent with client files show twice in Sent, though no client has reported two → Section 6, *Seen in use*; office-PC check 13. The app sends each email once *(checked with a fake Outlook)*; the second copy is probably Outlook and Gmail each keeping one *(inferred)* |
+| Q17 | Approve the proposed safety-net tests (Decisions Log, Session 0, Proposed) so they are written before the first change? | They pin today's behaviour so a change cannot alter it unnoticed | **Answered 03-11-2026 (recommended answer taken):** approved — written as the first step of the first change |
+| Q18 | Some lists have two columns with the same heading (Q13). Today the app silently keeps only the later column. What should happen? | A whole column of client data can vanish without notice (G26) | Refuse such a list and name the repeated heading, so you rename one in Excel |
+| Q19 | Some lists have their headings below row 1 (Q13). Should sessions and profiles remember the sheet and the "Data starts at Row / Column" setting, and should switching sheets keep it? | Today a restore or a profile reads the active sheet with headings in row 1 (G23) | Yes — remember both, and keep the setting when switching sheets |

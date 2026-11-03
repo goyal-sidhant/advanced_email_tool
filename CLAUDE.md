@@ -23,15 +23,14 @@ technical jargon — explain it on first use.
   `requirements.txt`. Excel through COM and Power Query are not used.
 - **Mail:** classic Outlook for Windows (desktop), driven through COM; emails go
   out from the user's own Outlook mailboxes. Every sending PC uses classic Outlook;
-  the mailboxes are a mix of Microsoft 365 and other providers (my answers,
-  03-11-2026). New Outlook cannot be automated: the app detects it and explains how
-  to switch back.
+  the mailboxes are a mix of Microsoft 365 and other providers, Gmail among them
+  (my answers, 03-11-2026). New Outlook cannot be automated: the app detects it and
+  explains how to switch back.
 - **Shared portable Python (nothing installed on staff PCs):** NO — on hold.
   Only I change this to YES, once the shared Python is set up (MASTER_GUIDE A1).
 - **Runtime:** while NO, the Python installed on each staff PC plus this app's
-  packages from `requirements.txt` (versions not pinned). Which Python version the
-  office PCs run is not recorded in the repo (README says 3.10+) — an open question
-  in the Brief. Standard 13 covers both settings; moving this app onto it (Python
+  packages from `requirements.txt` (versions not pinned). The office PCs run
+  Windows 11 (26H2) and Python 3.14.9 (my answer, 03-11-2026). Standard 13 covers both settings; moving this app onto it (Python
   3.14 with the py launcher, a windowless `.bat` launcher) is a change I approve first.
 - **Shared apps folder:** the app's folder lives in a shared folder on the office
   server (my answer, 03-11-2026), so every user shares its `.app_data` (see User data).
@@ -42,8 +41,9 @@ technical jargon — explain it on first use.
 - **User data:** `.app_data\` inside the app's own folder (`config.py:24`): sessions,
   templates, recipient lists, the send checkpoint, preferences and the log (which
   contains client email addresses). Because the folder is shared, all users share
-  these files — never tested (Brief Q1, Q12; audit G24, G36). Git ignores
-  `.app_data`; never commit it.
+  these files — never tested (Brief Q1; audit G24, G36). Decided, not yet built
+  (Brief Change 9, Q12): the data moves to `C:\Users\Public\Advanced Email Tool\`
+  on each computer. Git ignores `.app_data`; never commit it.
 
 ## Reference Documents
 - `.build-docs/PROJECT_AUDIT_advanced_email_tool.md` — Full audit of the app as it is
@@ -67,9 +67,10 @@ technical jargon — explain it on first use.
 
 ## Current Phase
 Adopted into the toolkit (Session 0, 03-11-2026): documentation only, no code
-changed; the app is at v1.8.0 (commit f5b9511). Questions Q1-Q6 answered; Changes
-1-3 are decided in the Brief but not built. No change in progress. Next: the
-remaining open questions (Q7-Q17), then a Build Plan when I ask for a change.
+changed; the app is at v1.8.0 (commit f5b9511). Questions Q1-Q17 answered; Changes
+1-9 are decided in the Brief but not built. No change in progress. Next: questions
+Q18-Q19 and the office-PC checks (Decisions Log, Session 0), then a Build Plan when
+I ask for a change.
 > Once the build starts: Sub-phase [N.M] [name] · Step [.K] [step name] · [status].
 > Updated at the end of every step (Build Loop rule 1).
 
