@@ -47,7 +47,7 @@ technical jargon — explain it on first use.
 
 ## Reference Documents
 - `.build-docs/PROJECT_AUDIT_advanced_email_tool.md` — Full audit of the app as it is
-  at adoption (v1.8.0, 03-11-2026): features F1–F25, rules R1–R46, gaps G1–G41
+  at adoption (v1.8.0, 03-11-2026): features F1–F25, rules R1–R46, gaps G1–G42
 - `.build-docs/REBUILD_BRIEF_advanced_email_tool.md` — The app as it works today: my
   decisions, the Contracts (C1, C2, …) and the open questions. Every change starts here
 - `.build-docs/BUILD_PLAN.md` — The Build Plan: tracker, structure, phases and sub-phases,
@@ -67,10 +67,10 @@ technical jargon — explain it on first use.
 
 ## Current Phase
 Adopted into the toolkit (Session 0, 03-11-2026): documentation only, no code
-changed; the app is at v1.8.0 (commit f5b9511). Questions Q1-Q17 answered; Changes
-1-9 are decided in the Brief but not built. No change in progress. Next: questions
-Q18-Q19 and the office-PC checks (Decisions Log, Session 0), then a Build Plan when
-I ask for a change.
+changed; the app is at v1.8.0 (commit f5b9511). Questions Q1-Q20 answered; Changes
+1-12 are decided in the Brief but not built. No change in progress. Next: the
+office-PC checks (Decisions Log, Session 0), then a Build Plan when I ask for a
+change.
 > Once the build starts: Sub-phase [N.M] [name] · Step [.K] [step name] · [status].
 > Updated at the end of every step (Build Loop rule 1).
 

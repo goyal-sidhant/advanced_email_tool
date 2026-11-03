@@ -246,6 +246,9 @@ Section 7.
   (`:471`); duplicate header names silently lose a column; a workbook whose internal "used range"
   note is wrong loads only part of its rows (verified on dummy data: 1 of 5 rows); a failed load
   empties the handler, after which **Validate Emails** reports every address as valid.
+  [Added 03-11-2026, while preparing question Q19: when a workbook was last saved with another sheet
+  in view, the Worksheet drop-down shows the first sheet while the sheet in view is read, and Apply
+  and Refresh then read the sheet the drop-down shows — G42.]
 
 ### F2 — Map columns (To, CC, BCC, Identifier 1, Identifier 2, AND/OR)
 - **What it does:** tells the app which column holds the recipient address(es), optional CC and
@@ -753,6 +756,7 @@ could go to the wrong person; **MEDIUM** = wrong content, lost work or a mislead
 | G28 | **Auto-detected mapping can be wrong**: "CC Email" became To and "Email ID" became Identifier 1; with no email-like column, To = the first column. | MEDIUM | Verified |
 | G29 | **A failed load leaves the old rows on screen but empties the handler**, so "Validate Emails" then says "All N email addresses are valid!". | LOW | Verified (handler empty) + code reading |
 | G30 | `.xls` and `.csv` are not accepted; codes typed as numbers lose leading zeros in Excel itself (00123 → 123, which then also matches 1234…). | LOW | Code reading |
+| G42 | **The Worksheet drop-down can name a different sheet from the one read.** Choosing a workbook reads the sheet that was in view when it was last saved in Excel (`load_file` → `workbook.active`), but the drop-down is refilled and shows the first sheet (`ui/tab_excel.py:447-463`). Apply and Refresh read the sheet the drop-down shows (`:694-715`, `:870-890`), so the list changes to another sheet's clients without a message. A session restore or a profile has the same mismatch (`:1003`). | HIGH (another sheet's clients, without warning) | Verified — a dummy workbook saved with its second sheet "Feb" in view: "Jan" in the drop-down while Feb's clients were listed; Apply switched to Jan's. Found 03-11-2026, after the review |
 
 ### 7.5 Email content
 | # | Gap | Severity | How confirmed |
@@ -1005,7 +1009,7 @@ yourself, Start Sending, watch the log; Retry failed or Resume if interrupted.
      confirmation, and never count Preview-mode runs as sent. Saved lists already use emails this way.
      (G1-G3, G5)
    - *Selection and restore:* restore sessions and Refresh by email like saved lists; save the sheet,
-     header offset and account; make profiles replace or clear every setting they cover. (G19-G23, G7)
+     header offset and account; make profiles replace or clear every setting they cover; name the sheet actually read in the Worksheet drop-down. (G19-G23, G7, G42)
    - *Pre-send gate:* before Start Sending, block (or ask about) blank/invalid addresses, `{MISSING}`
      variables, recipients with no client files (counted separately from static files), and duplicates;
      show CC/BCC in Preview. (G4, G6, G9, G31, G41)
@@ -1212,3 +1216,6 @@ Done after all twelve sections were written; the document was re-read from Secti
    - [Corrected during self-review — G13 originally relied on the Send tab's "without attachments"
      warning as a safety net; F12 and `ui/tab_send.py:481-498` show that warning counts static files
      too, so it stays silent whenever any static file is attached. Added as G41.]
+   - [Added after the review, 03-11-2026 — while preparing question Q19, a dummy workbook saved with its
+     second sheet in view listed that sheet's clients while the Worksheet drop-down named the first
+     sheet, and Apply then switched to the first sheet's clients. Added as G42.]

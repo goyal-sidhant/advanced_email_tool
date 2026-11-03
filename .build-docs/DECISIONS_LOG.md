@@ -74,7 +74,8 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
   - Claude read the six toolkit files named by the author in full (and the toolkit's own decisions
     index), then every file of this repository (63 tracked files plus `.gitignore`) and all 28
     commits, before writing anything.
-  - The audit (`PROJECT_AUDIT_advanced_email_tool.md`) describes 25 features, 46 rules and 41 gaps.
+  - The audit (`PROJECT_AUDIT_advanced_email_tool.md`) describes 25 features, 46 rules and 41 gaps
+    (G42 was added later in this session: Decided 33).
     The app's 82 tests pass (Linux, Outlook faked). The most serious gaps, each reproduced on dummy
     data: an identifier picks up other clients' files when one is contained in another (G11);
     Resume and Retry send without asking, Resume can hit another file's rows, and a Preview-mode run
@@ -186,6 +187,32 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
       once. *(inferred)* The second copy most likely comes from Outlook and Gmail each keeping one;
       a Universal BCC or CC to the sending mailbox, or Outlook's conversation view, are the other
       candidates. Office-PC check 13 settles it. Recorded in the Brief (Sections 2 and 6, Q16).
+  31. **Q18 answered (author, 03-11-2026): "Keep both, rename one"** — not the recommended answer
+      (refuse the list). Change 10 in the Brief: when two columns share a heading, both are kept; each
+      later repeat is renamed "Amount (2)", "Amount (3)", and a message lists the renamed headings
+      when the list loads. `{Amount}` and the drop-downs then mean the left-most column — a change from
+      today, where the right-hand column's values win (G26; verified on a dummy list: `{Amount}` gave
+      the right-hand 2700). New contract C26. To confirm when planned: whether headings that differ
+      only in capitals or spaces count as repeats; what a saved session, profile or template naming a
+      repeated heading should do. For that plan: a repeated To, CC or BCC heading means the emails go
+      to the left-most column's addresses after the change. Not built.
+  32. **Q19 answered (author, 03-11-2026): "Remember, keep on switch"** (the recommended answer) —
+      Change 11 in the Brief: sessions and profiles remember the sheet and the "Data starts at" row and
+      column, and a restore or a profile reads the list with them; switching sheets keeps the row and
+      column; a newly chosen file starts at row 1, column 1, as today; the boxes always show the row
+      and column the list was actually read from (stated on the card as a plain display fix). Today
+      only Apply and Refresh use the boxes (G23; verified on a dummy list with headings in row 3).
+      New contract C27. To confirm when planned: a remembered sheet that is no longer in the workbook.
+      Not built.
+  33. **Q20 answered (author, 03-11-2026): "Always the first sheet"** — not the recommended answer (the
+      sheet in view). Q20 is new: while checking Q19, Claude found a gap, now G42 in the audit. Choosing
+      a workbook reads the sheet that was in view when it was last saved, but the Worksheet drop-down
+      shows the first sheet, and Apply and Refresh then read the sheet the drop-down shows — verified
+      on a dummy workbook saved with "Feb" in view (the drop-down said "Jan" while Feb's clients
+      were listed; Apply switched to Jan's). Change 12 in the Brief: a newly chosen workbook always
+      opens on its first sheet, and the drop-down always names the sheet read (stated on the card as
+      a plain fix), so Apply and Refresh never change sheets. Rule R13 changes; new contract C28.
+      Not built.
 - **Assumptions** (technical only — they stand unless the author objects):
   - A. The project tag in file names is `advanced_email_tool` (the repository's name).
   - B. The audit and the Brief describe `main` at commit `f5b9511` (v1.8.0).
@@ -246,8 +273,9 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
     `pytest` in a development requirements list.
 - **Open:**
   - Business questions — the full list, with recommended defaults, is at the end of the Brief.
-    Q1-Q17 answered 03-11-2026 (Decided 11-30). Still open: Q18 (duplicate headings) and Q19 (the
-    heading row and sheet remembered), both from the Q13 answer, to be asked one at a time.
+    Q1-Q20 answered 03-11-2026 (Decided 11-33): Q18 and Q19 came from the Q13 answer, Q20 from
+    checking Q19. No business question is open; the points marked "to confirm when planned" in the
+    Brief are asked when their change is planned.
   - **Needs an office PC** (cannot be checked in the cloud):
     1. Run the app's tests there (`py -m pytest` in the app folder; expect 82 passed) and note the
        Windows, Python, PyQt5, pywin32 and openpyxl versions (`py -m pip list`).
@@ -383,6 +411,15 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
   here (Decided 30); the send code checked with a fake Outlook (one send per email); office-PC check
   13 added; CLAUDE.md *Current Phase* and RESUME_CONTEXT brought up to date.
 - **Open:** Q18 and Q19 (from the Q13 answer); the office-PC checks.
+
+#### 03-11-2026 | Session 0 | Message 17
+- **Discussed:** The author's "ask": Q18 and Q19, one card each, after Claude checked both on dummy
+  data. Checking Q19 turned up a new gap (G42: the Worksheet drop-down can name another sheet than the
+  one read), asked as Q20.
+- **Decided/Built:** Q18 → Change 10 (C26), Q19 → Change 11 (C27), Q20 → Change 12 (C28), recorded in
+  the Brief and here (Decided 31-33); G42 added to the audit; CLAUDE.md *Current Phase* and
+  RESUME_CONTEXT brought up to date. Not built.
+- **Open:** the office-PC checks; the "to confirm when planned" points in the Brief.
 
 ---
 

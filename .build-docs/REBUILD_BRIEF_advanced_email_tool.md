@@ -18,8 +18,8 @@
 > my reading of intent or of how the office uses the app — please confirm or correct it.
 >
 > Numbers used below: features **F1–F25** (audit Section 3), rules **R1–R46** (audit Section 5), gaps
-> **G1–G41** (audit Section 7), Contracts **C1–C25** (Section 5 below; "C4 extended" and C15-C25 are
-> decided, not yet built), questions **Q1–Q19** (end).
+> **G1–G42** (audit Section 7; G42 was added on 03-11-2026), Contracts **C1–C28** (Section 5 below;
+> "C4 extended" and C15-C28 are decided, not yet built), questions **Q1–Q20** (end).
 
 ---
 
@@ -74,7 +74,7 @@ notes name the gaps that are still candidates; each needs your decision.
 
 | Feature | Audit Ref | Decision | Notes |
 |---------|-----------|----------|-------|
-| Load the recipient Excel file | F1 | KEEP AS-IS | Never locks or changes the file. Known to apply (Q13): G26 duplicate headings (Q18), G23 heading row not remembered (Q19). Possible: G25, G27, G29 |
+| Load the recipient Excel file | F1 | KEEP BUT IMPROVE | Never locks or changes the file. **Decided (Q18): Change 10** — a repeated heading keeps both columns, the later one renamed "(2)" (G26). **Decided (Q19): Change 11** — the sheet and the heading row are remembered by sessions and profiles and kept when switching sheets (G23). **Decided (Q20): Change 12** — a newly chosen workbook opens on its first sheet, and the drop-down always shows the sheet read (G42). Not yet built. Possible: G25, G27, G29 |
 | Map columns (To, CC, BCC, Identifier 1/2, AND/OR) | F2 | KEEP AS-IS | Gap: G28 (auto-detection can pick the wrong column) |
 | Check email addresses | F3 | KEEP BUT IMPROVE | **Decided (Q10): Change 7** — blank and invalid addresses listed before sending and left out unless you confirm (G6). Not yet built |
 | Export a blank Excel template | F4 | KEEP AS-IS | — |
@@ -93,8 +93,8 @@ notes name the gaps that are still candidates; each needs your decision.
 | Send the batch | F17 | KEEP BUT IMPROVE | **Decided: Change 7 (Q10)** — blank rows never stop the batch; **Change 8 (Q11)** — the chosen account is remembered and never swapped (G6, G7). Not yet built. Still open: G5, G8-G10, G41 |
 | Test email to yourself | F18 | KEEP AS-IS | Clears CC/BCC, so it cannot show the BCC |
 | Checkpoint, Resume, Retry failed | F19 | KEEP BUT IMPROVE | **Decided (Q4): Change 1** — Resume/Retry ask first; Resume only on the same file and clients (by email); Preview mode never counts as sent (G1-G3). Not yet built |
-| Session auto-save and restore | F20 | KEEP BUT IMPROVE | G20 (ticks restored by row number) kept by your decision (Q5); the session moves to each computer — **Change 9 (Q12)**, not yet built (G24); still open: G21, G23 |
-| Profiles | F21 | KEEP BUT IMPROVE | **Decided (Q7): Change 4** — a profile replaces everything it covers (G22). Not yet built |
+| Session auto-save and restore | F20 | KEEP BUT IMPROVE | G20 (ticks restored by row number) kept by your decision (Q5); the session moves to each computer — **Change 9 (Q12)**, not yet built (G24); the sheet and heading row are remembered — **Change 11 (Q19)**, not yet built (G23); still open: G21 |
+| Profiles | F21 | KEEP BUT IMPROVE | **Decided (Q7): Change 4** — a profile replaces everything it covers (G22). **Decided (Q19): Change 11** — a profile also remembers the sheet and the heading row (G23). Not yet built |
 | Remembered folders and window | F22 | KEEP BUT IMPROVE | Preferences move to each computer — **Change 9 (Q12)**; the Send from account is remembered too — **Change 8 (Q11)**. Not yet built |
 | Theme (system / light / dark) | F23 | KEEP AS-IS | Old look kept (Standard 14 exception for apps kept on PyQt5) |
 | Log file | F24 | KEEP BUT IMPROVE | Contains client addresses; moves out of the shared folder to each computer — **Change 9 (Q12)** (G36). Not yet built |
@@ -142,12 +142,20 @@ whose fix would change them — whether to change them is a question at the end.
 - R8 — Only `.xlsx` and `.xlsm` — (Audit: `core/excel_handler.py`, lines 101-102)
 - R9 — Read from an in-memory copy, read-only, using the values Excel last saved — (Audit:
   `core/excel_handler.py`, lines 45-59)
-- R10 — Headers in "Data starts at Row" (default 1), data from "Column" (default 1) — (Audit:
-  `core/excel_handler.py`, lines 150-168)
+- ⚠ R10 — Headers in "Data starts at Row" (default 1), data from "Column" (default 1). Only Apply and
+  Refresh use these boxes: choosing a file, switching sheets, a restore and a profile read from row 1
+  of the sheet, even while the boxes show another row (G23) — **to change: Change 11 (Q19)** —
+  (Audit: `core/excel_handler.py`, lines 150-168; `ui/tab_excel.py`, lines 387, 471, 694-715, 870-890,
+  1003)
 - R11 — Empty header → `Column_N`; blank rows skipped; empty cells → blank — (Audit:
   `core/excel_handler.py`, lines 160-177)
-- R13 — Sheets matched ignoring case; without a choice, the workbook's active sheet — (Audit:
-  `core/excel_handler.py`, lines 61-69, 108-114)
+- ⚠ R11 (repeated headings) — when two columns share a heading, each row keeps only the right-hand
+  column's value, with no message (G26) — **to change: Change 10 (Q18)** — (Audit:
+  `core/excel_handler.py`, lines 158-177)
+- ⚠ R13 — Sheets matched ignoring case; without a choice, the workbook's active sheet (the one in view
+  when it was last saved in Excel), while the Worksheet drop-down shows the first sheet; Apply and
+  Refresh then read the sheet the drop-down shows (G42) — **to change: Change 12 (Q20)** — (Audit:
+  `core/excel_handler.py`, lines 61-69, 108-114; `ui/tab_excel.py`, lines 447-463)
 - ⚠ R14 — Auto-detection: To = first column containing "email"/"e-mail"/"mail"/"to"/"recipient";
   Identifier 1 = first containing "identifier"/"id"/"code"/"pan"/"gstin"/"client" (G28) — (Audit:
   `ui/tab_excel.py`, lines 520-546)
@@ -306,6 +314,52 @@ The full list (R1-R46, including window sizes and message limits) is in audit Se
   - **Why:** G24, G36 — the shared data was never tested, and one user could be offered another
     user's run to resume.
 
+- **Change 10 — A repeated heading keeps both columns** (your answer to Q18, 03-11-2026: "Keep both,
+  rename one")
+  - **Old rule:** when two columns have the same heading, each row keeps only the right-hand column's
+    value under it; the left-hand column's values vanish, although the drop-downs offer the heading
+    twice, and nothing is said (R11, G26 — on a dummy list with two "Amount" columns, `{Amount}`
+    gave the right-hand 2700, never the left-hand 15000).
+  - **New rule:** every column is kept. The first (left-most) keeps its heading; each later repeat is
+    renamed with a number — "Amount (2)", "Amount (3)" — and when the list loads a message lists
+    every renamed heading and its column. `{Amount}` and the drop-downs then mean the left-most
+    column — a change from today, and the message says so. This includes To, CC and BCC: if a list
+    ever has two "Email" columns, the emails go to the left-most one's addresses.
+    *To confirm when the change is planned: (a) whether headings that differ only in capitals or
+    spaces ("Amount", "amount ") count as repeats — `{variables}` will ignore capitals (Change 5);
+    (b) what a saved session, profile or template that names a repeated heading should do.*
+  - **Why:** G26 — a whole column of client data could vanish without anyone noticing.
+
+- **Change 11 — The heading row and the sheet are remembered, and the boxes always tell the truth**
+  (your answer to Q19, 03-11-2026: "Remember, keep on switch" — the recommended answer)
+  - **Old rule:** only Apply and Refresh use the "Data starts at Row / Column" boxes. Choosing a file,
+    switching sheets, restoring a session and loading a profile read the headings from row 1 (a
+    restore or a profile also goes back to the workbook's active sheet), while the boxes can still
+    show another row (R10, R13, G23 — verified on a dummy list with headings in row 3).
+  - **New rule:** sessions and profiles remember the sheet and the "Data starts at" row and column,
+    and a restore or a profile reads the list with them. Switching sheets keeps the row and column.
+    A newly chosen file starts at row 1, column 1, as today. The boxes always show the row and column
+    the list was actually read from.
+    *To confirm when the change is planned: what a restore or a profile does when its remembered
+    sheet is no longer in the workbook.*
+  - **Why:** G23 — after a restore, a profile or a sheet switch, the list could be read from the
+    wrong row or sheet while the boxes showed something else.
+
+- **Change 12 — A newly chosen workbook opens on its first sheet, and the drop-down always names the
+  sheet read** (your answer to Q20, 03-11-2026: "Always the first sheet"; the recommended answer was
+  the sheet in view)
+  - **Old rule:** choosing a workbook reads the sheet that was in view when it was last saved in Excel,
+    but the Worksheet drop-down shows the first sheet; Apply and Refresh then read the sheet the
+    drop-down shows, so the list changes to another sheet's clients without a message (R13, G42 —
+    verified on a dummy workbook saved with its second sheet "Feb" in view: the drop-down said "Jan"
+    while Feb's clients were listed, and Apply switched to Jan's).
+  - **New rule:** a newly chosen workbook (Browse…, or dropped on the tab) always opens on its first
+    (left-most) sheet, whatever was in view in Excel, and the drop-down shows it. The drop-down always
+    names the sheet actually read (stated on the question card as a plain fix), so Apply and Refresh
+    never change sheets. A restore or a profile opens the sheet it remembered (Change 11).
+  - **Why:** G42 — the list could change to another sheet's clients without a word, while the
+    drop-down named a different sheet.
+
 The other candidate changes are the remaining ⚠ rules above; each one is a question at the end.
 
 ### Rules to ADD (not in original):
@@ -387,6 +441,14 @@ until then the safety-net tests pin today's behaviour, and the Change Request re
 - **C25** — Sessions, the send checkpoint, preferences and the log are kept only in
   `C:\Users\Public\Advanced Email Tool\` on each computer — never in the shared server folder
   (templates and saved lists: as settled when the change is planned). *(Change 9.)*
+- **C26** — No column of a list is ever dropped: when headings repeat, the first keeps its name, each
+  later one is renamed "(2)", "(3)", …, and the renamed headings are listed when the list loads.
+  *(Change 10.)*
+- **C27** — The list on screen is always read with the sheet, row and column the Excel tab shows —
+  after choosing a file, switching sheets, Apply, Refresh, a restore or a profile — and sessions and
+  profiles bring back the sheet, row and column they saved. *(Change 11.)*
+- **C28** — A newly chosen workbook opens on its first (left-most) sheet, and Apply and Refresh never
+  change the sheet. *(Change 12; C27 covers the drop-down always naming the sheet read.)*
 
 ---
 
@@ -429,9 +491,13 @@ see "Seen in use" after this list.*
 - G22 — a profile keeps the previous campaign's static files — **decided: Change 4 (Q7)**, not yet
   built.
 - G26 — two columns with the same heading: the earlier one's values vanish — **known to apply**
-  (Q13), though no missing column has been noticed (Q16); how to handle it is question Q18.
+  (Q13), though no missing column has been noticed (Q16) — **decided: Change 10 (Q18)**, not yet
+  built.
 - G23 — the heading row ("Data starts at Row") and the sheet are not remembered by sessions and
-  profiles — **known to apply** (Q13); question Q19.
+  profiles — **known to apply** (Q13) — **decided: Change 11 (Q19)**, not yet built.
+- G42 — the Worksheet drop-down can name a different sheet from the one read, and Apply and Refresh
+  then switch to another sheet's clients without a word (found 03-11-2026 while checking Q19) —
+  **decided: Change 12 (Q20)**, not yet built.
 - G25, G27 — a list that was never saved by Excel can load only its first rows, and its formulas read
   as blank: possible, because such lists are re-saved in Excel only sometimes (Q13).
 - G31 — `{MISSING}` sent to clients — **decided: Change 5 (Q8)**, not yet built.
@@ -530,8 +596,10 @@ Ideas already parked in the app's own `ROADMAP.md` (lines 185-196 and 222), carr
 
 Business questions are asked one at a time, in plain English, with a recommended default (Build Loop
 rule 3). Each answer is written back into this Brief — as a rule, a contract or an edge case — and
-into the Decisions Log. **Asked first:** Q1-Q4 — answered on 03-11-2026; Q5-Q17 were answered the
-same day. **Still open:** Q18 and Q19, which came from the answer to Q13.
+into the Decisions Log. **Asked first:** Q1-Q4 — answered on 03-11-2026; Q5-Q20 were answered the
+same day (Q18 and Q19 came from the answer to Q13; Q20 was found while checking Q19). **No question
+is open.** The points marked "to confirm when planned" in Section 5 are asked when that change is
+planned.
 
 | # | Question | Why it matters | Recommended default |
 |---|---|---|---|
@@ -552,5 +620,6 @@ same day. **Still open:** Q18 and Q19, which came from the answer to Q13.
 | Q15 | May a future `[DOCS]` change correct `README.md`, `QUICKSTART.md`, `CHANGELOG.md` and `ROADMAP.md` (audit 7.9)? | They contradict the code in places | **Answered 03-11-2026 (recommended answer taken):** yes — a `[DOCS]` change, done when you ask (Parking Lot) |
 | Q16 | Which of the audit's gaps have actually happened to you? | Goes into Section 6 above | **Answered 03-11-2026 (four cards):** none of the twelve problems listed has been noticed. One new problem seen: emails sent with client files show twice in Sent, though no client has reported two → Section 6, *Seen in use*; office-PC check 13. The app sends each email once *(checked with a fake Outlook)*; the second copy is probably Outlook and Gmail each keeping one *(inferred)* |
 | Q17 | Approve the proposed safety-net tests (Decisions Log, Session 0, Proposed) so they are written before the first change? | They pin today's behaviour so a change cannot alter it unnoticed | **Answered 03-11-2026 (recommended answer taken):** approved — written as the first step of the first change |
-| Q18 | Some lists have two columns with the same heading (Q13). Today the app silently keeps only the later column. What should happen? | A whole column of client data can vanish without notice (G26) | Refuse such a list and name the repeated heading, so you rename one in Excel |
-| Q19 | Some lists have their headings below row 1 (Q13). Should sessions and profiles remember the sheet and the "Data starts at Row / Column" setting, and should switching sheets keep it? | Today a restore or a profile reads the active sheet with headings in row 1 (G23) | Yes — remember both, and keep the setting when switching sheets |
+| Q18 | Some lists have two columns with the same heading (Q13). Today the app silently keeps only the later column. What should happen? | A whole column of client data can vanish without notice (G26) | Recommended: refuse such a list and name the repeated heading. **Answered 03-11-2026:** keep both, rename one — each later repeat becomes "Amount (2)", and a message lists the renamed headings → Change 10, contract C26. Not yet built |
+| Q19 | Some lists have their headings below row 1 (Q13). Should sessions and profiles remember the sheet and the "Data starts at Row / Column" setting, and should switching sheets keep it? | Today a restore or a profile reads the active sheet with headings in row 1 (G23) | Recommended: yes — remember both, and keep the setting when switching sheets. **Answered 03-11-2026 (recommended answer):** remember them; switching sheets keeps the row and column; a newly chosen file starts at row 1, column 1; the boxes always show what was read → Change 11, contract C27. Not yet built |
+| Q20 | Which sheet should a newly chosen workbook open on? (Found while checking Q19.) | Today the app reads the sheet that was in view when the workbook was last saved, but the drop-down shows the first sheet; Apply and Refresh then switch to it (G42) | Recommended: the sheet in view, shown in the drop-down. **Answered 03-11-2026:** always the first sheet; the drop-down always names the sheet read → Change 12, contract C28. Not yet built |
