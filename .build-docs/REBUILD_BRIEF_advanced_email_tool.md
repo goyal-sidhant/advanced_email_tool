@@ -40,9 +40,8 @@ mailbox, keeping track so an interrupted run can continue.
 
 - **Primary user:** *(inferred)* you and your office staff. `ROADMAP.md:232` says "Target: GST
   practitioners, tax professionals".
-- **Technical comfort:** *(inferred)* non-coders; but today the app is started with
-  `python main.py` (README, QUICKSTART), which needs a command — how staff actually start it is
-  question Q1.
+- **Technical comfort:** *(inferred)* non-coders. They start the app from a desktop shortcut
+  (your answer to Q1a), not by typing a command; README and QUICKSTART still say `python main.py`.
 - **Frequency of use:** "~50-100 emails every 10 days" (`ROADMAP.md:233`).
 - **Environment:** Windows 10/11 with classic Outlook desktop (`README.md:28-30`). Recipient
   workbooks and attachment folders on local disks, OneDrive *(inferred from commit messages
@@ -50,17 +49,23 @@ mailbox, keeping track so an interrupted run can continue.
 - **Where the app runs (your answer to Q1, 03-11-2026):** from **a shared folder on the office
   server**. So every user shares the one `.app_data` folder inside it — the session, the send
   checkpoint, templates, saved lists, preferences and the log. Sharing it has **never been tested**
-  (gaps G24, G36). How staff start the app is not yet answered.
+  (gaps G24, G36).
+- **How staff start it (your answer to Q1a, 03-11-2026):** from **a desktop shortcut** on each PC.
+  What the shortcut runs — `python.exe` or `pythonw.exe` with `main.py` — is not recorded (office-PC
+  check 11).
 - **Mail program (your answer to Q2, 03-11-2026):** every PC that sends uses **classic Outlook**.
-  The mailbox provider (Microsoft 365 or other) was not stated.
+  The mailboxes are **a mix**: some on Microsoft 365, some on other providers (your answer to Q2a,
+  03-11-2026). Today this changes nothing (the app sends through Outlook whatever the service); it
+  would matter only if Outlook had to be replaced — Microsoft Graph for the Microsoft 365
+  mailboxes, the provider's own mail server (SMTP) for the others (Standard 12).
 
 ---
 
 ## 3. FEATURE DECISIONS
 
 Every feature is **KEEP AS-IS** for now — the adoption default, not a decision you have made —
-except F19, where your answer to Q4 decided a change. The notes name the gaps that are candidates for
-"KEEP BUT IMPROVE"; each needs your decision.
+except where your answers decided a change (marked KEEP BUT IMPROVE, with the Change number). The
+notes name the gaps that are still candidates; each needs your decision.
 
 | Feature | Audit Ref | Decision | Notes |
 |---------|-----------|----------|-------|
@@ -72,18 +77,18 @@ except F19, where your answer to Q4 decided a change. The notes name the gaps th
 | Paste Excel tables, insert images | F6 | KEEP AS-IS | Gap: G34 |
 | Import body from .docx/.txt/.html | F7 | KEEP AS-IS | Paragraph text only |
 | Email templates | F8 | KEEP AS-IS | Names that differ only in symbols share one file |
-| Universal BCC | F9 | KEEP AS-IS | **G4: a BCC typed last is ignored** (Q6) |
+| Universal BCC | F9 | KEEP BUT IMPROVE | **Decided (Q6): Change 3** — whatever is in the BCC box applies (G4). Not yet built |
 | Static attachments | F10 | KEEP AS-IS | — |
 | Variable attachments by identifier | F11 | KEEP AS-IS | "Contains" matching kept by your decision (Q3): identifiers are chosen so none hits another client's file (G11 accepted). Still open: G12-G17 |
 | Attachment on/off switches | F12 | KEEP AS-IS | Gap: G41 |
-| Choose recipients | F13 | KEEP AS-IS | **G19: Excel Refresh ticks everyone again** (Q5) |
+| Choose recipients | F13 | KEEP BUT IMPROVE | **Decided (Q5): Change 2** — Excel Refresh keeps the hand-picked clients ticked, matched by email (G19). Not yet built |
 | Saved recipient lists | F14 | KEEP AS-IS | Follow clients by email (C9) |
-| Preview each email | F15 | KEEP AS-IS | Does not show CC/BCC (G4) |
+| Preview each email | F15 | KEEP BUT IMPROVE | **Decided (Q6): Change 3** — Preview shows each email's CC and BCC. Not yet built |
 | Connect to Outlook | F16 | KEEP AS-IS | Classic Outlook only (G37, Q2) |
 | Send the batch | F17 | KEEP AS-IS | Gaps: G5-G10, G41 |
 | Test email to yourself | F18 | KEEP AS-IS | Clears CC/BCC, so it cannot show the BCC |
 | Checkpoint, Resume, Retry failed | F19 | KEEP BUT IMPROVE | **Decided (Q4): Change 1** — Resume/Retry ask first; Resume only on the same file and clients (by email); Preview mode never counts as sent (G1-G3). Not yet built |
-| Session auto-save and restore | F20 | KEEP AS-IS | **G20: restores ticks by row number**; G21, G23, G24 (Q5) |
+| Session auto-save and restore | F20 | KEEP AS-IS | G20 (ticks restored by row number) kept by your decision (Q5); still open: G21, G23, G24 |
 | Profiles | F21 | KEEP AS-IS | **G22: keeps the previous campaign's static files** (Q7) |
 | Remembered folders and window | F22 | KEEP AS-IS | — |
 | Theme (system / light / dark) | F23 | KEEP AS-IS | Old look kept (Standard 14 exception for apps kept on PyQt5) |
@@ -120,7 +125,8 @@ whose fix would change them — whether to change them is a question at the end.
 - ⚠ R5 — To, CC and BCC column names are matched ignoring case; identifier columns and `{variables}`
   are case-sensitive (G13, G31, Q8) — (Audit: `core/email_builder.py`, lines 221-236 and 270-276;
   `core/template_engine.py`, line 80)
-- R6 — Universal BCC is added to every email unless already in that row's BCC — (Audit:
+- ⚠ R6 — Universal BCC is added to every email unless already in that row's BCC — but an address
+  typed in the box after the subject and body is ignored (G4) — **to change: Change 3 (Q6)** — (Audit:
   `core/email_builder.py`, lines 238-243)
 - R7 — The test email goes to the sending account's own address, subject "[TEST] …", CC and BCC
   removed, attachments kept — (Audit: `ui/tab_send.py`, lines 553-559)
@@ -151,7 +157,9 @@ whose fix would change them — whether to change them is a question at the end.
 **Attachments**
 - R22 — A file belongs to a client if its **file name contains** the identifier, ignoring case; the
   folder name does not count. **Kept by your decision (Q3, 03-11-2026):** identifiers are chosen so
-  that none can hit another client's file; no overlap check (G11 accepted) — (Audit:
+  that none can hit another client's file; no overlap check (G11 accepted). The identifiers are
+  **client codes** (Q3a), so the safeguard holds as long as no code sits inside another (`101`
+  inside `1010`) — for example codes all of the same length — (Audit:
   `core/attachment_matcher.py`, lines 122-134)
 - ⚠ R23 — OR by default; AND (both in one name) only when the row has both identifiers, otherwise
   the one present is used (G12) — (Audit: `core/email_builder.py`, lines 279-284)
@@ -201,6 +209,26 @@ The full list (R1-R46, including window sizes and message limits) is in audit Se
     why; (c) a Preview-mode run never counts as sent: its clients stay pending for a real send.
   - **Why:** gaps G1-G3, each reproduced on dummy data — another file's clients emailed, clients never
     emailed, and no chance to stop.
+
+- **Change 2 — Excel Refresh keeps your hand-picked recipients** (your answers to Q5 and its
+  follow-up, 03-11-2026: "Only fix Refresh", "By email address")
+  - **Old rule:** clicking Refresh on the Excel tab ticks every recipient again, even when the file did
+    not change (G19).
+  - **New rule:** after Refresh the same clients stay ticked, found again **by email address** wherever
+    their rows moved (as saved lists do); anyone ticked who is no longer in the file is listed for you.
+    Session restore at start-up is **not** changed: it still re-ticks by row number (G20, kept by your
+    decision).
+  - **Why:** G19 reproduced on dummy data — clients you had unticked came back into the send.
+
+- **Change 3 — The Universal BCC always applies, and Preview shows CC and BCC** (your answer to Q6,
+  03-11-2026: "Fix both")
+  - **Old rule:** the Universal BCC box is read only when the subject or body changes, so an address
+    typed there last is ignored (G4); the Preview tab never shows CC or BCC, and the test email
+    removes them, so the missing copy cannot be seen.
+  - **New rule:** whatever is in the Universal BCC box when the emails are built goes on every email
+    (unless that row's own BCC already has it), and the Preview tab shows each email's To, CC and BCC
+    exactly as they will be sent.
+  - **Why:** G4 reproduced on dummy data — emails were built with no BCC copy.
 
 The other candidate changes are the remaining ⚠ rules above; each one is a question at the end.
 
@@ -252,18 +280,23 @@ contract only after you approve it here first.*
   Identifier 2 and AND/OR. (`ui/tab_excel.py:717-791`; test `test_tab_excel_mapping.py`)
 - **C13** — Changing a column mapping never changes a hand-picked selection while the rows are the
   same. (`ui/tab_recipients.py:292-296`; test `test_recipient_selection.py`) — *Excel Refresh does
-  re-select everyone (G19): Q5.*
+  re-select everyone today (G19); Change 2 (Q5) keeps the ticks: see C17.*
 - **C14** — The test email goes only to the sending account's own address, from the account chosen in
   "Send from", with CC and BCC removed. (`ui/tab_send.py:519-567`; test `test_tab_send_test_email.py`)
 
-**Decided, not yet built** (Change 1 above, Q4). They take effect with the change that builds them;
+**Decided, not yet built** (the Changes above). They take effect with the change that builds them;
 until then the safety-net tests pin today's behaviour, and the Change Request replaces those tests:
 - **C4 (extended)** — Start Sending, Resume Previous and Retry Failed all show the number of emails and
   ask before anything is sent or displayed.
 - **C15** — Resume sends only when the Excel file and the clients (checked by email address) match the
   interrupted run; otherwise it sends nothing and says why.
 - **C16** — A Preview-mode run never counts as sent: every client it only displayed stays pending for a
-  real send.
+  real send. *(C4 extended, C15, C16: Change 1.)*
+- **C17** — Excel Refresh never changes which clients are ticked: the same clients stay ticked, matched
+  by email address, and any ticked client no longer in the file is listed. *(Change 2.)*
+- **C18** — Every email carries the Universal BCC exactly as it stands in the box when the emails are
+  built (unless that row's own BCC already has it). *(Change 3.)*
+- **C19** — Preview shows each email's To, CC and BCC exactly as they will be sent. *(Change 3.)*
 
 ---
 
@@ -297,9 +330,10 @@ Reference audit Sections 6 and 7.
 *Which of these have actually happened is question Q16. Found by the audit (HIGH first):*
 - G1-G3 — Resume/Retry without confirmation; Resume can hit another file's rows; Preview mode
   counts as sent — **decided: Change 1 (Q4)**, not yet built.
-- G4 — Universal BCC typed last is ignored.
+- G4 — Universal BCC typed last is ignored — **decided: Change 3 (Q6)**, not yet built.
 - G14, G41 — stale "no files" after a Rescan; missing client files hidden by static files.
-- G19, G20, G22 — Refresh re-selects everyone; restore by row number; profile keeps old static files.
+- G19 — Refresh re-selects everyone — **decided: Change 2 (Q5)**, not yet built.
+- G22 — a profile keeps the previous campaign's static files.
 - G25 — some exported workbooks load only their first rows.
 - G31 — `{MISSING}` sent to clients.
 - G24, G36 — shared `.app_data`: **known to apply** (the app runs from a shared server folder, Q1).
@@ -309,6 +343,7 @@ Reference audit Sections 6 and 7.
 ### Not worth handling (over-engineering for my use case):
 - **G11 — identifiers contained in other identifiers** (`101` inside `1010`): decided not worth a
   check (Q3, 03-11-2026) — "the identifiers are selected so that it doesn't hit other client's file".
+- **G20 — session restore re-ticks rows by number**: kept as it is (Q5, 03-11-2026).
 
 *Still for you to decide.* Candidates: G9 (duplicate addresses), G17 (subfolder tick needs a
 Rescan), G30 (`.xls`/`.csv`), G34 (unusual picture formats), G39 (shared log rollover), G40 (test
@@ -363,7 +398,7 @@ Ideas already parked in the app's own `ROADMAP.md` (lines 185-196 and 222), carr
 | Email scheduling (send later) | January 2026 | Maybe someday | Parked |
 | CC/BCC from a separate file | January 2026 | Maybe someday | Parked |
 | Signature management | January 2026 | Maybe someday | "Usually handled by Outlook" |
-| Graph API (New Outlook) | January 2026 | Maybe someday | "Major rewrite, avoid if possible" — see G37, Q2 |
+| Graph API (New Outlook) | January 2026 | Maybe someday | "Major rewrite, avoid if possible" — see G37, Q2. The mailboxes are a mix (Q2a), so a replacement would need Graph *and* SMTP |
 | Mac support | January 2026 | Maybe someday | Parked |
 | Gmail/SMTP support | January 2026 | Maybe someday | Parked |
 
@@ -377,12 +412,12 @@ into the Decisions Log. **Asked first:** Q1-Q4 — answered on 03-11-2026.
 
 | # | Question | Why it matters | Recommended default |
 |---|---|---|---|
-| Q1 | Where does the app's folder live, and how do staff start it today — each PC's own copy, one shared office folder, OneDrive, or only your PC? | All users of one folder share `.app_data` (sessions, the send checkpoint, templates, the log) — G24, G36; it also decides the launcher later (Standard 13) | **Answered 03-11-2026:** a shared folder on the office server; sharing of the app data never tested. *Still open: how staff start it.* |
-| Q2 | Do all PCs that send use **classic** Outlook? Any on New Outlook? Are the mailboxes Microsoft 365 or another provider? | The app cannot work with New Outlook (G37) | **Answered 03-11-2026:** classic Outlook on all sending PCs. *Still open: the mailbox provider.* |
-| Q3 | What do your identifiers look like (full PAN/GSTIN, numeric client codes, client names)? Should a future change stop before sending when one file matches more than one selected client? | "Contains" matching lets `101` pick up `1010_…` and `Ram` pick up `Shriram …` — another client's documents (G11) | **Answered 03-11-2026:** leave as is — "the identifiers are selected so that it doesn't hit other client's file". No overlap check. G11 is an accepted risk, covered by how identifiers are chosen. *(The kinds of identifier used were not stated.)* |
+| Q1 | Where does the app's folder live, and how do staff start it today — each PC's own copy, one shared office folder, OneDrive, or only your PC? | All users of one folder share `.app_data` (sessions, the send checkpoint, templates, the log) — G24, G36; it also decides the launcher later (Standard 13) | **Answered 03-11-2026:** a shared folder on the office server; sharing of the app data never tested. **Q1a (03-11-2026):** staff start it from a desktop shortcut. |
+| Q2 | Do all PCs that send use **classic** Outlook? Any on New Outlook? Are the mailboxes Microsoft 365 or another provider? | The app cannot work with New Outlook (G37) | **Answered 03-11-2026:** classic Outlook on all sending PCs. **Q2a (03-11-2026):** the mailboxes are a mix of Microsoft 365 and other providers. |
+| Q3 | What do your identifiers look like (full PAN/GSTIN, numeric client codes, client names)? Should a future change stop before sending when one file matches more than one selected client? | "Contains" matching lets `101` pick up `1010_…` and `Ram` pick up `Shriram …` — another client's documents (G11) | **Answered 03-11-2026:** leave as is — "the identifiers are selected so that it doesn't hit other client's file". No overlap check. G11 is an accepted risk, covered by how identifiers are chosen. **Q3a (03-11-2026):** the identifiers are client codes. |
 | Q4 | Should Resume and Retry Failed ask before sending, refuse when the Excel file or recipients differ from the interrupted run, and never treat Preview mode as sent? | Today they send at once, by row number, and Preview-mode emails count as sent (G1-G3) | **Answered 03-11-2026:** fix all three → Change 1 (Section 5), contracts C4 (extended), C15, C16. Not yet built |
-| Q5 | When you click Excel Refresh, or restore a session, should your hand-picked selection be kept by client (email), like saved lists? | Today Refresh ticks everyone again and restore ticks by row number (G19, G20) | Keep it by email; list anyone no longer in the file |
-| Q6 | Should the Universal BCC always apply exactly as typed, and should Preview show CC and BCC? | A BCC typed last is silently ignored (G4) | Yes |
+| Q5 | When you click Excel Refresh, or restore a session, should your hand-picked selection be kept by client (email), like saved lists? | Today Refresh ticks everyone again and restore ticks by row number (G19, G20) | **Answered 03-11-2026:** only fix Refresh, matching by email address → Change 2, contract C17. Session restore stays as it is (G20). Not yet built |
+| Q6 | Should the Universal BCC always apply exactly as typed, and should Preview show CC and BCC? | A BCC typed last is silently ignored (G4) | **Answered 03-11-2026:** fix both → Change 3, contracts C18, C19. Not yet built |
 | Q7 | When you load a profile, should it replace every setting it covers — clearing static files and the folder when the profile has none? | Today the previous campaign's static files stay (G22) | Yes, replace everything |
 | Q8 | Should Start Sending be blocked while any email still contains `{MISSING}`? Should `{name}` match a column "Name" (ignore case)? | Clients can receive `{MISSING}` (G31) | Block; ignore case |
 | Q9 | Do your templates use amounts, percentages or dates? How should they appear (e.g. 1,50,000.00; 18%; 01-04-2026)? | Today: 150000, 0.18, 2026-04-01 00:00:00 (G32) | Show values as formatted in Excel |

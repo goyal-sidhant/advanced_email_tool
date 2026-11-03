@@ -102,9 +102,9 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
   11. **Q1 answered (author, 03-11-2026):** the app's folder is in a shared folder on the office
       server; the sharing of the app data has never been tested. So every user shares one
       `.app_data` (session, send checkpoint, templates, lists, preferences, log): gaps G24 and G36
-      apply. How staff start the app is still open.
+      apply. How staff start the app: see 15.
   12. **Q2 answered (author, 03-11-2026):** every PC that sends uses classic Outlook. G37 (New
-      Outlook cannot be automated) stays a future risk only. The mailbox provider is still open.
+      Outlook cannot be automated) stays a future risk only. Mailbox provider: see 16.
   13. **Q3 answered (author, 03-11-2026):** "the identifiers are selected so that it doesn't hit
       other client's file". So "contains" matching stays as it is and no overlap check is added;
       G11 is an accepted risk, covered by how the office chooses identifiers. Rule R22 and Contract
@@ -117,6 +117,25 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
       contracts C4, C15, C16 — decided, **not yet built**: it is built only when the author asks for
       the change, through a Change Request and a Build Plan. Until then the proposed safety-net test
       T6 pins today's behaviour; the change replaces those pins with tests of the new rule.
+  15. **Q1a answered (author, 03-11-2026):** staff start the app from a desktop shortcut on each
+      PC. What the shortcut runs (`python.exe` or `pythonw.exe` with `main.py`) is not recorded —
+      office-PC check 11. Recorded in the Brief (Section 2, Q1) and CLAUDE.md (Tech Stack).
+  16. **Q2a answered (author, 03-11-2026):** the Outlook mailboxes are a mix — some on Microsoft
+      365, some on other providers. Nothing changes today; if Outlook ever had to be replaced, both
+      Microsoft Graph and SMTP would be needed (Standard 12). Recorded in the Brief (Section 2, Q2,
+      Parking Lot) and CLAUDE.md (Tech Stack).
+  17. **Q3a answered (author, 03-11-2026):** the identifiers are client codes. With codes, the Q3
+      safeguard holds as long as no code sits inside another (e.g. codes of equal length); recorded
+      next to rule R22 in the Brief. Where the audit inferred that client names are used as
+      identifiers (Section 8, commit `bc73127`), the Brief now wins: client codes. Safety-net test
+      T2 will use dummy client codes.
+  18. **Q5 answered (author, 03-11-2026):** "Only fix Refresh"; follow-up: "By email address". Change 2
+      in the Brief: after Excel Refresh the same clients stay ticked, matched by email address, and
+      ticked clients no longer in the file are listed (contract C17 — decided, **not yet built**).
+      Session restore keeps re-ticking by row number (G20 accepted).
+  19. **Q6 answered (author, 03-11-2026): "Fix both"** — Change 3 in the Brief: whatever is in the
+      Universal BCC box when the emails are built goes on every email, and Preview shows each email's
+      To, CC and BCC. Contracts C18, C19 — decided, **not yet built**.
 - **Assumptions** (technical only — they stand unless the author objects):
   - A. The project tag in file names is `advanced_email_tool` (the repository's name).
   - B. The audit and the Brief describe `main` at commit `f5b9511` (v1.8.0).
@@ -147,8 +166,8 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
     and sends nothing on "No"); C7 (exact attachment lists for OR, AND, the on/off switches and
     static files). C1, C5, C6 and C8-C14 already have tests (Brief Section 5).
   - **T2 `tests/test_safety_net_golden_emails.py`** — a "golden" set: a dummy workbook of about eight
-    clients (PAN-like IDs, client codes 101 and 1010, names such as "Ram Kumar" and "Shriram
-    Traders", an amount of 150000, 1234.56, a date, a percentage, a blank address, a ";" pair and a
+    clients identified by dummy client codes — the kind the office uses (Q3a) — including `101` and
+    `1010` to pin today's "contains" matching, an amount of 150000, 1234.56, a date, a percentage, a blank address, a ";" pair and a
     "," pair), a dummy attachments folder, a template with variables (one with the wrong case), a
     Universal BCC and one static file. All emails are built through the main window (off-screen) and
     compared — To, CC, BCC, subject, body text and attachment names — with a stored expected file,
@@ -198,6 +217,9 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
     10. Because the app runs from the shared server folder (Q1): with dummy data only, open it on two
         PCs at once and note what each sees — the "Restore Previous Session?" prompt and the
         "Resume Previous" button may show the *other* person's work (G24).
+    11. Open one desktop shortcut's Properties and note its Target: `python.exe` (a black window
+        stays open beside the app) or `pythonw.exe` (no black window — and then an unexpected error
+        closes the app without any message, G35).
 - **Exchanges:**
 
 #### 03-11-2026 | Session 0 | Message 1
@@ -233,6 +255,36 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
 - **Decided/Built:** "Fix all three" recorded as Change 1 in the Brief (Section 5, contracts C4
   extended, C15, C16; F19 now KEEP BUT IMPROVE) and here (Decided 14). Not built.
 - **Open:** Q5-Q17 when the author is ready; office-PC checks; approval of safety-net tests (Q17).
+
+#### 03-11-2026 | Session 0 | Message 6
+- **Discussed:** Q1a — how staff start the app.
+- **Decided/Built:** A desktop shortcut on each PC (Decided 15); Brief, CLAUDE.md and office-PC check
+  11 updated.
+- **Open:** Q2a (mailbox provider) next.
+
+#### 03-11-2026 | Session 0 | Message 7
+- **Discussed:** Q2a — which mail service the mailboxes are on.
+- **Decided/Built:** A mix of Microsoft 365 and other providers (Decided 16); Brief and CLAUDE.md
+  updated.
+- **Open:** Q3a (kinds of identifier) next.
+
+#### 03-11-2026 | Session 0 | Message 8
+- **Discussed:** Q3a — kinds of identifier.
+- **Decided/Built:** Client codes (Decided 17); Brief (R22, Q3) and the T2 test-data note updated.
+- **Open:** Q5 next.
+
+#### 03-11-2026 | Session 0 | Message 9
+- **Discussed:** Q5 — keeping hand-picked recipients on Refresh and session restore; follow-up on how
+  to match the clients.
+- **Decided/Built:** Change 2 (Refresh keeps the ticks, by email; C17); restore unchanged (G20
+  accepted) — Decided 18.
+- **Open:** Q6 next.
+
+#### 03-11-2026 | Session 0 | Message 10
+- **Discussed:** Q6 — the Universal BCC typed last is ignored; Preview hides CC/BCC (G4).
+- **Decided/Built:** Change 3 (C18, C19) recorded in the Brief and here (Decided 19). Not built.
+- **Open:** Q7 next. (The session's worker restarted before this answer; all earlier edits were
+  checked and found intact.)
 
 ---
 

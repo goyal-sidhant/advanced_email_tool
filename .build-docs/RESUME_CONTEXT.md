@@ -20,9 +20,12 @@
   Outlook; identifiers are chosen so that none hits another client's file (no overlap check, G11
   accepted); Resume and Retry: "Fix all three" → **Change 1** in the Brief (contracts C4 extended,
   C15, C16) — **decided, not built**.
-- **Open:** Q5-Q17 (end of the Brief) and the unanswered halves of Q1-Q3 (how staff start the app,
-  the mailbox provider, the kinds of identifier); office-PC checks (Decisions Log, Session 0,
-  *Open*); the proposed safety-net tests T1-T7 await approval (Q17).
+- **Also answered on 03-11-2026:** Q1a (desktop shortcut), Q2a (a mix of Microsoft 365 and other
+  mailboxes), Q3a (client codes), Q5 (Change 2: Refresh keeps the ticks, by email; session restore
+  unchanged), Q6 (Change 3: the Universal BCC always applies; Preview shows CC and BCC) — Decisions
+  Log, Decided 15-19.
+- **Open:** Q7-Q17 (end of the Brief); office-PC checks (Decisions Log, Session 0, *Open*); the
+  proposed safety-net tests T1-T7 await approval (Q17).
 
 ## Exact next action
 
