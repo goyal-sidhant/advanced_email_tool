@@ -470,6 +470,8 @@ Section 7.
   campaign. A run made in Preview mode that is cancelled records the displayed emails as done, so a
   later real-send Resume **skips them** (rows 0-1 never sent). Clicking Start Sending instead of
   Resume after a cancel starts a fresh run that re-sends the first part. Section 7.1.
+  [Added 03-11-2026: Resume Previous also comes back while a run is going, and clicking it sends the
+  pending emails twice — G43.]
 
 ### F20 — Session auto-save and restore; New Session
 - **Where:** `data/session_manager.py`; `ui/main_window.py` (`_setup_auto_save` :324,
@@ -718,11 +720,12 @@ could go to the wrong person; **MEDIUM** = wrong content, lost work or a mislead
 | G3 | **Preview mode counts as sent.** A Preview-mode run that is cancelled records the displayed emails as completed; a later Resume with Preview mode off sends only the rest — the displayed ones are **never sent** (rows 0-1 skipped). | HIGH | Verified |
 | G4 | **Universal BCC typed last is ignored.** The BCC box has no change signal; the builder reads it only when the subject or body changes (`ui/main_window.py:391-399`; `ui/tab_compose.py:157-159`). Emails were built with no BCC until the subject was edited again. Preview never shows BCC and the test email clears it, so this is invisible. | HIGH (records copy missing) | Verified |
 | G5 | **Start Sending after a cancel re-sends the first part.** It starts a fresh checkpoint for all ticked rows; the "N emails" in the confirmation is the full number. | MEDIUM | Code reading (`ui/tab_send.py:582-614`) |
-| G6 | **Blank or invalid addresses are not stopped.** They reach Outlook; a blank one fails ("No recipients specified"); **three in a row stop the whole batch** with "Outlook may be unavailable" (verified); a name typed in the email column (e.g. "Ramesh Kumar") is passed to Outlook, which may resolve it against the address book *(inferred — Outlook behaviour, needs an office PC)*. Comma-separated addresses are passed as one string. | MEDIUM | Verified (blank, comma); inferred (name resolution) |
+| G6 | **Blank or invalid addresses are not stopped.** Invalid ones reach Outlook; a blank one fails before Outlook is used ("No recipients specified"); **three in a row stop the whole batch** with "Outlook may be unavailable" (verified); a name typed in the email column (e.g. "Ramesh Kumar") is passed to Outlook, which may resolve it against the address book *(inferred — Outlook behaviour, needs an office PC)*. Comma-separated addresses are passed as one string. | MEDIUM | Verified (blank, comma); inferred (name resolution) |
 | G7 | **Sending account not remembered.** Saved in sessions and profiles but never restored; each start selects the first Outlook account. If setting the account fails, the email silently goes from the default account (warning in the log only, `core/outlook_sender.py:309-318`). | MEDIUM | Verified (not restored); code reading (fallback) |
 | G8 | **"Sent" means handed to Outlook.** Offline Outlook keeps emails in the Outbox; the app still reports success. The online check is shown once, at connection time. | MEDIUM | Code reading |
 | G9 | **No duplicate check**: the same address on two ticked rows gets two emails. | LOW | Code reading |
 | G10 | **Closing the window during a send** asks "Are you sure?" and then closes while the send thread is still running; Qt normally aborts the process then, and the email in flight may be sent but not recorded (sent again on Resume). | LOW | *Inferred — needs an office PC* |
+| G43 | **Resume Previous clicked while a run is still going sends the pending emails twice.** Entering the Send tab calls `set_emails()` (`ui/main_window.py:473-488`), which shows Resume Previous whenever the checkpoint is "in progress" — also during a run (`ui/tab_send.py:463-470`). `_resume_sending` and `_launch_send` (`:667-696`, `:616-651`) start a second sender without checking that one is running, and both send the rows still pending. | HIGH (clients emailed twice) | Verified — a dummy list of 5, fake Outlook, 1-second gap: after 2 sends, Preview and back to Send, then Resume Previous: clients 3-5 each got two emails. Found 03-11-2026 by a consistency check, after the review |
 
 ### 7.2 Attachment matching
 | # | Gap | Severity | How confirmed |
@@ -1219,3 +1222,6 @@ Done after all twelve sections were written; the document was re-read from Secti
    - [Added after the review, 03-11-2026 — while preparing question Q19, a dummy workbook saved with its
      second sheet in view listed that sheet's clients while the Worksheet drop-down named the first
      sheet, and Apply then switched to the first sheet's clients. Added as G42.]
+   - [Added after the review, 03-11-2026 — an independent consistency check found, and Claude reproduced,
+     a second sender started by Resume Previous during a run (the emails still pending sent twice).
+     Added as G43.]

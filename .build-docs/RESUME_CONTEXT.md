@@ -49,12 +49,16 @@
       and column; the boxes always show what was read;
   12. a newly chosen workbook opens on its first sheet, and the drop-down always names the sheet
       read.
-  The points marked "to confirm when planned" in the Brief are asked at that change's .1 Plan.
+  The points marked "to confirm when planned" in the Brief are asked when that change's Change
+  Request updates the Brief (Exact next action, step 2).
 - **Parking Lot:** two ideas added by the author on 03-11-2026 — sending by signing in to the mail
   service (OAuth), and exporting and importing the app's settings (Brief Section 9). Not planned.
-- **Open:** no business question. The office-PC checks (Decisions Log, Session 0, *Open*: checks
-  1-13, check 8 answered), and the "to confirm when planned" points in the Brief, asked when their
-  change is planned.
+- **Open:** no business question is waiting. The office-PC checks (Decisions Log, Session 0, *Open*:
+  checks 1-13; check 8 answered, check 7 answered by Q1 except OneDrive); the "to confirm when
+  planned" points in the Brief, asked when their change is planned; and whether and when to fix G43.
+- **New gap G43 (found 03-11-2026 by the consistency check, reproduced):** clicking Resume Previous
+  while a run is still going sends every email still pending a second time. Not decided; the fix
+  itself needs no business choice (Brief Section 6).
 
 ## Exact next action
 
@@ -63,9 +67,10 @@
 2. When the author asks for the first change, follow pipeline Part 3, Template 2 (Change Request):
    - first update the Brief (the rule and any contract the change touches), asking the "to confirm
      when planned" points that belong to that change;
-   - write and commit the approved safety-net tests T1-T7; they must pass on today's code;
-   - then write `.build-docs/BUILD_PLAN.md` (Session 1) with the change as its first sub-phase, and run
-     it through the Build Loop in CLAUDE.md — one step per "next".
+   - then write `.build-docs/BUILD_PLAN.md` (Session 1), with the change as its first sub-phase, and
+     commit it; once the author approves it, its first step writes and commits the approved
+     safety-net tests T1-T7 (Decided 28), which must pass on today's code; then run the change
+     through the Build Loop in CLAUDE.md — one step per "next".
 
 ## Step status
 
@@ -110,5 +115,10 @@ From the git history (each was a real failure in use) and from the adoption audi
     depends on them is an office-PC check; dummy data only, never real client files.
 12. **One `Send()` per email.** `core/outlook_sender.py` hands each email to Outlook once; it goes
     again only when someone runs the batch again — Start Sending after a cancel, Resume or Retry
-    (G1-G3, G5). A double copy of every email in Sent therefore starts with office-PC check 13, not
-    with the app's code (Q16).
+    (G1-G3, G5), including Resume clicked while a run is still going (G43). A double copy in Sent of
+    every email sent with client files therefore starts with office-PC check 13, not with the app's
+    code (Q16).
+13. **A Send-tab button can come back in the middle of a run.** Entering the Send tab calls
+    `set_emails()`, which shows Resume Previous whenever the checkpoint is "in progress" — also while
+    a run is going — and nothing stops a second sender (G43). Any change to the Send tab must keep
+    one run at a time.

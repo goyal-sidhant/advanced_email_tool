@@ -18,7 +18,7 @@
 > my reading of intent or of how the office uses the app — please confirm or correct it.
 >
 > Numbers used below: features **F1–F25** (audit Section 3), rules **R1–R46** (audit Section 5), gaps
-> **G1–G42** (audit Section 7; G42 was added on 03-11-2026), Contracts **C1–C28** (Section 5 below;
+> **G1–G43** (audit Section 7; G42 and G43 were added on 03-11-2026), Contracts **C1–C28** (Section 5 below;
 > "C4 extended" and C15-C28 are decided, not yet built), questions **Q1–Q20** (end).
 
 ---
@@ -92,7 +92,7 @@ notes name the gaps that are still candidates; each needs your decision.
 | Connect to Outlook | F16 | KEEP AS-IS | Classic Outlook only (G37, Q2) |
 | Send the batch | F17 | KEEP BUT IMPROVE | **Decided: Change 7 (Q10)** — blank rows never stop the batch; **Change 8 (Q11)** — the chosen account is remembered and never swapped (G6, G7). Not yet built. Still open: G5, G8-G10, G41 |
 | Test email to yourself | F18 | KEEP AS-IS | Clears CC/BCC, so it cannot show the BCC |
-| Checkpoint, Resume, Retry failed | F19 | KEEP BUT IMPROVE | **Decided (Q4): Change 1** — Resume/Retry ask first; Resume only on the same file and clients (by email); Preview mode never counts as sent (G1-G3). Not yet built |
+| Checkpoint, Resume, Retry failed | F19 | KEEP BUT IMPROVE | **Decided (Q4): Change 1** — Resume/Retry ask first; Resume and Retry only on the same file and clients (by email); Preview mode never counts as sent (G1-G3). Not yet built. Found later: G43 (Resume clicked during a run sends the pending emails twice), not decided yet |
 | Session auto-save and restore | F20 | KEEP BUT IMPROVE | G20 (ticks restored by row number) kept by your decision (Q5); the session moves to each computer — **Change 9 (Q12)**, not yet built (G24); the sheet and heading row are remembered — **Change 11 (Q19)**, not yet built (G23); still open: G21 |
 | Profiles | F21 | KEEP BUT IMPROVE | **Decided (Q7): Change 4** — a profile replaces everything it covers (G22). **Decided (Q19): Change 11** — a profile also remembers the sheet and the heading row (G23). Not yet built |
 | Remembered folders and window | F22 | KEEP BUT IMPROVE | Preferences move to each computer — **Change 9 (Q12)**; the Send from account is remembered too — **Change 8 (Q11)**. Not yet built |
@@ -116,7 +116,8 @@ None requested at adoption.
 
 ### Rules to KEEP exactly as-is:
 Every rule below is how the code works today; nothing has been changed. Rules flagged ⚠ have a gap
-whose fix would change them — whether to change them is a question at the end.
+whose fix would change them — those marked "to change" are decided (Changes 1-12, Section 5); the
+others (R5 for identifier columns, R14, R23) are still for you to decide.
 
 **Recipients and addresses**
 - R1 — An address must match `name@domain.tld` (letters, digits and `._%+-` before "@"; a dot and at
@@ -125,9 +126,10 @@ whose fix would change them — whether to change them is a question at the end.
   `core/validators.py`, lines 64-74; `core/email_builder.py`, lines 315-332)
 - R3 — Typo suggestions for 17 common misspelt domains (gmial.com → gmail.com …) — (Audit:
   `config.py`, lines 65-83)
-- ⚠ R4 — Invalid or blank addresses are shown but never blocked (G6) — **to change: Change 7
-  (Q10)** — (Audit:
-  `ui/tab_excel.py`, lines 611-620; `ui/tab_send.py`, lines 582-614)
+- ⚠ R4 — Invalid addresses are marked on the Excel tab (red cells, "⚠ N invalid email(s)"); blank ones
+  are not — the tab can still say "✓ All N emails valid" — and only the Validate Emails button lists
+  them; neither is blocked (G6) — **to change: Change 7 (Q10)** — (Audit: `ui/tab_excel.py`, lines
+  600, 611-620; `core/excel_handler.py`, line 424; `ui/tab_send.py`, lines 582-614)
 - ⚠ R5 — To, CC and BCC column names are matched ignoring case; identifier columns and `{variables}`
   are case-sensitive (G13, G31) — **`{variables}` to change: Change 5 (Q8)**; identifier columns stay
   case-sensitive for now (G13) — (Audit: `core/email_builder.py`, lines 221-236 and 270-276;
@@ -147,7 +149,7 @@ whose fix would change them — whether to change them is a question at the end.
   of the sheet, even while the boxes show another row (G23) — **to change: Change 11 (Q19)** —
   (Audit: `core/excel_handler.py`, lines 150-168; `ui/tab_excel.py`, lines 387, 471, 694-715, 870-890,
   1003)
-- R11 — Empty header → `Column_N`; blank rows skipped; empty cells → blank — (Audit:
+- R11, R12 — Empty header → `Column_N`; blank rows skipped; empty cells → blank — (Audit:
   `core/excel_handler.py`, lines 160-177)
 - ⚠ R11 (repeated headings) — when two columns share a heading, each row keeps only the right-hand
   column's value, with no message (G26) — **to change: Change 10 (Q18)** — (Audit:
@@ -156,9 +158,10 @@ whose fix would change them — whether to change them is a question at the end.
   when it was last saved in Excel), while the Worksheet drop-down shows the first sheet; Apply and
   Refresh then read the sheet the drop-down shows (G42) — **to change: Change 12 (Q20)** — (Audit:
   `core/excel_handler.py`, lines 61-69, 108-114; `ui/tab_excel.py`, lines 447-463)
-- ⚠ R14 — Auto-detection: To = first column containing "email"/"e-mail"/"mail"/"to"/"recipient";
-  Identifier 1 = first containing "identifier"/"id"/"code"/"pan"/"gstin"/"client" (G28) — (Audit:
-  `ui/tab_excel.py`, lines 520-546)
+- ⚠ R14 — Auto-detection tries the words in this order, and the first word found in any heading
+  decides (so "Email" beats an earlier "Mail ID" or "To Address"): To = the column containing
+  "email"/"e-mail"/"mail"/"to"/"recipient"; Identifier 1 = the column containing
+  "identifier"/"id"/"code"/"pan"/"gstin"/"client" (G28) — (Audit: `ui/tab_excel.py`, lines 520-546)
 
 **Templates**
 - R16 — A variable is `{` + text without `{ } : ;` + `}` — (Audit: `core/template_engine.py`, line 28)
@@ -173,8 +176,10 @@ whose fix would change them — whether to change them is a question at the end.
 - R22 — A file belongs to a client if its **file name contains** the identifier, ignoring case; the
   folder name does not count. **Kept by your decision (Q3, 03-11-2026):** identifiers are chosen so
   that none can hit another client's file; no overlap check (G11 accepted). The identifiers are
-  **client codes** (Q3a), so the safeguard holds as long as no code sits inside another (`101`
-  inside `1010`) — for example codes all of the same length — (Audit:
+  **client codes** (Q3a), so the safeguard holds only as long as no code appears anywhere in another
+  client's file name — inside a longer code (`101` in `1010`) or in any other part of the name, such
+  as a year: codes of the same length are not enough (`202` and `024` both pick up
+  `101_GSTR3B_2024.pdf`, checked on dummy data, 03-11-2026) — (Audit:
   `core/attachment_matcher.py`, lines 122-134)
 - ⚠ R23 — OR by default; AND (both in one name) only when the row has both identifiers, otherwise
   the one present is used (G12) — (Audit: `core/email_builder.py`, lines 279-284)
@@ -222,9 +227,10 @@ The full list (R1-R46, including window sizes and message limits) is in audit Se
     is loaded it sends to that file's rows (R34); a Preview-mode run is recorded as sent, so a later
     real Resume skips those clients for good (R35).
   - **New rule:** (a) Resume and Retry Failed show the number of emails and ask before anything is
-    sent, like Start Sending; (b) Resume goes ahead only when the same Excel file and the same
-    clients — checked by email address, not row number — are loaded, and otherwise refuses and says
-    why; (c) a Preview-mode run never counts as sent: its clients stay pending for a real send.
+    sent, like Start Sending; (b) Resume and Retry Failed go ahead only when the same Excel file and
+    the same clients — checked by email address, not row number — are loaded, and otherwise refuse
+    and say why (Retry Failed, too, picks its rows by row number today); (c) a Preview-mode run never
+    counts as sent: its clients stay pending for a real send.
   - **Why:** gaps G1-G3, each reproduced on dummy data — another file's clients emailed, clients never
     emailed, and no chance to stop.
 
@@ -282,8 +288,10 @@ The full list (R1-R46, including window sizes and message limits) is in audit Se
 
 - **Change 7 — Blank or invalid addresses are listed before sending and left out** (Q10: you took the
   recommended answer, 03-11-2026)
-  - **Old rules:** invalid and blank addresses are only marked on the Excel tab and still go to Outlook
-    (R4); three blank ones in a row stop the whole batch with "Outlook may be unavailable" (R32, G6);
+  - **Old rules:** invalid addresses are only marked on the Excel tab and still go to Outlook, and
+    blank ones are listed only by the Validate Emails button (R4); in a run, each blank one fails
+    ("No recipients specified"), and three in a row stop the whole batch with "Outlook may be
+    unavailable" (R32, G6);
     "a@x.com, b@x.com" (a comma instead of ";") goes to Outlook as one address.
   - **New rule:** before a run (Start, Resume, Retry), every selected row with a blank or invalid
     address — commas instead of ";" included — is listed; those rows are left out of the run unless you
@@ -360,7 +368,9 @@ The full list (R1-R46, including window sizes and message limits) is in audit Se
   - **Why:** G42 — the list could change to another sheet's clients without a word, while the
     drop-down named a different sheet.
 
-The other candidate changes are the remaining ⚠ rules above; each one is a question at the end.
+The other candidate changes are the remaining ⚠ rules above — R5 for identifier columns (G13), R14
+(G28) and R23 (G12): none has been asked yet; each is still for you to decide, and stays as it is
+until you do.
 
 ### Rules to ADD (not in original):
 None decided yet.
@@ -382,7 +392,8 @@ contract only after you approve it here first.*
   `test_excel_handler.py` for "not locked")
 - **C3** — Within one run each selected row gets at most one email, and Resume never sends a row the
   checkpoint has marked sent or failed, even after several interruptions. (`data/checkpoint.py:273-292`;
-  tests `test_checkpoint.py`, `test_tab_send_resume.py`)
+  tests `test_checkpoint.py`, `test_tab_send_resume.py`) — *Not kept today when Resume Previous is
+  clicked while a run is still going (G43): every email still pending is then sent twice.*
 - **C4** — Start Sending shows the number of emails and asks for confirmation before anything is sent
   or displayed. (`ui/tab_send.py:589-600`; no test yet) — *Resume and Retry Failed do not ask today
   (G2); Q4 decided they must: see "C4 (extended)" below.*
@@ -395,7 +406,9 @@ contract only after you approve it here first.*
   indexed file whose **name contains** the recipient's identifier, ignoring case — OR across the two
   identifiers, AND only when the row has both. Nothing else is attached. (`core/attachment_matcher.py:107-229`;
   `core/email_builder.py:257-289`; no end-to-end test yet) — *Q3: "contains" stays; identifiers
-  are chosen so that none hits another client's file.*
+  are chosen so that none hits another client's file. Not kept today after a Rescan (G14): files
+  looked up for a client while the scan is still running are remembered after it ends, so that client
+  can miss some or all of their own files.*
 - **C8** — The session, the send checkpoint, saved recipient lists and preferences are written so a
   crash never leaves them half-written. (`utils/file_utils.py:16-29`; test `test_persistence.py`)
 - **C9** — A saved recipient list selects the same clients by email after rows move in Excel, and
@@ -407,7 +420,10 @@ contract only after you approve it here first.*
   connection, the test email and the batch run in worker threads. (tests
   `test_tab_excel_async_load.py`, `test_tab_send_startup.py`, `test_tab_send_test_email.py`)
 - **C12** — Restoring a session or a profile brings back the whole column mapping, including
-  Identifier 2 and AND/OR. (`ui/tab_excel.py:717-791`; test `test_tab_excel_mapping.py`)
+  Identifier 2 and AND/OR. (`ui/tab_excel.py:717-791`; test `test_tab_excel_mapping.py`) — *Today
+  only when the same headings are read again: a restore or a profile reads row 1 of the workbook's
+  active sheet (G23), so a mapping saved for headings below row 1 is not found, and the auto-detected
+  columns stay with no message (checked on a dummy list, 03-11-2026). Change 11 (Q19): see C27.*
 - **C13** — Changing a column mapping never changes a hand-picked selection while the rows are the
   same. (`ui/tab_recipients.py:292-296`; test `test_recipient_selection.py`) — *Excel Refresh does
   re-select everyone today (G19); Change 2 (Q5) keeps the ticks: see C17.*
@@ -419,7 +435,8 @@ until then the safety-net tests pin today's behaviour, and the Change Request re
 - **C4 (extended)** — Start Sending, Resume Previous and Retry Failed all show the number of emails and
   ask before anything is sent or displayed.
 - **C15** — Resume sends only when the Excel file and the clients (checked by email address) match the
-  interrupted run; otherwise it sends nothing and says why.
+  interrupted run, and Retry Failed only when they match the run whose failures it retries; otherwise
+  nothing is sent and the app says why.
 - **C16** — A Preview-mode run never counts as sent: every client it only displayed stays pending for a
   real send. *(C4 extended, C15, C16: Change 1.)*
 - **C17** — Excel Refresh never changes which clients are ticked: the same clients stay ticked, matched
@@ -446,7 +463,8 @@ until then the safety-net tests pin today's behaviour, and the Change Request re
   *(Change 10.)*
 - **C27** — The list on screen is always read with the sheet, row and column the Excel tab shows —
   after choosing a file, switching sheets, Apply, Refresh, a restore or a profile — and sessions and
-  profiles bring back the sheet, row and column they saved. *(Change 11.)*
+  profiles bring back the sheet, row and column they saved. *(Changes 11 and 12: the drop-down naming
+  the sheet read is Change 12's — G42.)*
 - **C28** — A newly chosen workbook opens on its first (left-most) sheet, and Apply and Refresh never
   change the sheet. *(Change 12; C27 covers the drop-down always naming the sheet read.)*
 
@@ -479,12 +497,18 @@ Reference audit Sections 6 and 7.
 - Text files in UTF-8, UTF-8-BOM, cp1252 or Latin-1.
 
 ### Must handle (were NOT handled — gaps from Section 7 that bit you):
-*Found by the audit (HIGH first). Asked which have actually happened (Q16, 03-11-2026, four cards
-of three problems each): none that anyone has noticed. Several of them fail silently (G14, G22,
-G26, G41), so "not noticed" does not prove "never happened". The one problem seen in use is new:
-see "Seen in use" after this list.*
+*Found by the audit (each one's severity is in audit Section 7). Asked which have actually happened
+(Q16, 03-11-2026, four cards of three problems each): none that anyone has noticed. Several of them
+fail silently (G14, G22, G26, G41), so "not noticed" does not prove "never happened". The one problem
+seen in use is new: see "Seen in use" after this list. The gaps below not marked "decided" are still
+for you to decide.*
 - G1-G3 — Resume/Retry without confirmation; Resume can hit another file's rows; Preview mode
   counts as sent — **decided: Change 1 (Q4)**, not yet built.
+- G43 — clicking Resume Previous while a run is still going (the button comes back when the Send tab
+  is opened again during the run) sends every email still pending a second time — found 03-11-2026 by
+  the consistency check and reproduced (dummy data, fake Outlook: 3 of 5 clients got two emails). It
+  breaks contract C3. **Not decided yet** — the fix needs no business choice (no second run may start
+  while one is going); it can go in with Change 1, or on its own as a bug fix, when you ask.
 - G4 — Universal BCC typed last is ignored — **decided: Change 3 (Q6)**, not yet built.
 - G14, G41 — stale "no files" after a Rescan; missing client files hidden by static files.
 - G19 — Refresh re-selects everyone — **decided: Change 2 (Q5)**, not yet built.
@@ -525,13 +549,16 @@ see "Seen in use" after this list.*
   turns out to be the cause, it comes back to you as a question.
 
 ### Not worth handling (over-engineering for my use case):
-- **G11 — identifiers contained in other identifiers** (`101` inside `1010`): decided not worth a
-  check (Q3, 03-11-2026) — "the identifiers are selected so that it doesn't hit other client's file".
+- **G11 — one client's identifier picking up another client's files** (`101` also attaches
+  `1010_ITR.pdf` and `C101_GST.pdf`; `202` picks up `101_GSTR3B_2024.pdf` through the year): decided
+  not worth a check (Q3, 03-11-2026) — "the identifiers are selected so that it doesn't hit other
+  client's file".
 - **G20 — session restore re-ticks rows by number**: kept as it is (Q5, 03-11-2026).
 
 *Still for you to decide.* Candidates: G9 (duplicate addresses), G17 (subfolder tick needs a
-Rescan), G30 (`.xls`/`.csv`), G34 (unusual picture formats), G39 (shared log rollover), G40 (test
-email during a batch).
+Rescan), G18 (emails over 25 MB only warned about), G30 (`.xls`/`.csv`), G34 (unusual picture
+formats), G35 (an unexpected error can close the app without a message — office-PC check 11), G38
+(package versions not pinned), G39 (shared log rollover), G40 (test email during a batch).
 
 ---
 
@@ -602,7 +629,8 @@ rule 3). Each answer is written back into this Brief — as a rule, a contract o
 into the Decisions Log. **Asked first:** Q1-Q4 — answered on 03-11-2026; Q5-Q20 were answered the
 same day (Q18 and Q19 came from the answer to Q13; Q20 was found while checking Q19). **No question
 is open.** The points marked "to confirm when planned" in Section 5 are asked when that change is
-planned.
+planned. Smaller gaps that are still for you to decide (Sections 4 and 6, G43 among them) need no
+answer until a change touches them, or until you want them fixed.
 
 | # | Question | Why it matters | Recommended default |
 |---|---|---|---|
@@ -622,7 +650,7 @@ planned.
 | Q14 | Which Windows version, Python version and screen size/scale do the sending PCs have? | Tests, launcher and window size | **Answered 03-11-2026:** Windows 11 (26H2), Python 3.14.9, 1080p screens. *The Windows display scale was not stated (office-PC check 12)* |
 | Q15 | May a future `[DOCS]` change correct `README.md`, `QUICKSTART.md`, `CHANGELOG.md` and `ROADMAP.md` (audit 7.9)? | They contradict the code in places | **Answered 03-11-2026 (recommended answer taken):** yes — a `[DOCS]` change, done when you ask (Parking Lot) |
 | Q16 | Which of the audit's gaps have actually happened to you? | Goes into Section 6 above | **Answered 03-11-2026 (four cards):** none of the twelve problems listed has been noticed. One new problem seen: emails sent with client files show twice in Sent, though no client has reported two → Section 6, *Seen in use*; office-PC check 13. The app sends each email once *(checked with a fake Outlook)*; the second copy is probably Outlook and Gmail each keeping one *(inferred)* |
-| Q17 | Approve the proposed safety-net tests (Decisions Log, Session 0, Proposed) so they are written before the first change? | They pin today's behaviour so a change cannot alter it unnoticed | **Answered 03-11-2026 (recommended answer taken):** approved — written as the first step of the first change |
+| Q17 | Approve the proposed safety-net tests (Decisions Log, Session 0, *Safety-net tests*) so they are written before the first change? | They pin today's behaviour so a change cannot alter it unnoticed | **Answered 03-11-2026 (recommended answer taken):** approved — written as the first step of the first change |
 | Q18 | Some lists have two columns with the same heading (Q13). Today the app silently keeps only the later column. What should happen? | A whole column of client data can vanish without notice (G26) | Recommended: refuse such a list and name the repeated heading. **Answered 03-11-2026:** keep both, rename one — each later repeat becomes "Amount (2)", and a message lists the renamed headings → Change 10, contract C26. Not yet built |
 | Q19 | Some lists have their headings below row 1 (Q13). Should sessions and profiles remember the sheet and the "Data starts at Row / Column" setting, and should switching sheets keep it? | Today a restore or a profile reads the active sheet with headings in row 1 (G23) | Recommended: yes — remember both, and keep the setting when switching sheets. **Answered 03-11-2026 (recommended answer):** remember them; switching sheets keeps the row and column; a newly chosen file starts at row 1, column 1; the boxes always show what was read → Change 11, contract C27. Not yet built |
 | Q20 | Which sheet should a newly chosen workbook open on? (Found while checking Q19.) | Today the app reads the sheet that was in view when the workbook was last saved, but the drop-down shows the first sheet; Apply and Refresh then switch to it (G42) | Recommended: the sheet in view, shown in the drop-down. **Answered 03-11-2026:** always the first sheet; the drop-down always names the sheet read → Change 12, contract C28. Not yet built |

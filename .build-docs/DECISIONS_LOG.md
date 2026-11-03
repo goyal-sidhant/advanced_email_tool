@@ -85,7 +85,7 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
     can reach clients (G31).
   - Not possible in this cloud session: opening the window, Outlook, Excel or the office share.
     What needs an office PC is listed under *Open*.
-- **Decided** (all by the author, in the adoption request):
+- **Decided** (all by the author: 1-10 in the adoption request, 11-33 answering Q1-Q20, 34 later):
   1. Keep the app as it is: no rebuild, no new repository; all future changes happen in this one.
   2. This session adds documentation files only: no existing code file is changed, moved,
      reformatted or deleted.
@@ -113,7 +113,7 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
       G14 (stale results after a Rescan), G15 (statistics in AND mode), G41 (missing client files
       hidden by static files).
   14. **Q4 answered (author, 03-11-2026): "Fix all three"** — Change 1 in the Brief: Resume and
-      Retry Failed ask first; Resume goes ahead only when the same Excel file and the same clients
+      Retry Failed ask first; each goes ahead only when the same Excel file and the same clients
       (checked by email) are loaded; a Preview-mode run never counts as sent. New or extended
       contracts C4, C15, C16 — decided, **not yet built**: it is built only when the author asks for
       the change, through a Change Request and a Build Plan. Until then the proposed safety-net test
@@ -126,7 +126,9 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
       Microsoft Graph and SMTP would be needed (Standard 12). Recorded in the Brief (Section 2, Q2,
       Parking Lot) and CLAUDE.md (Tech Stack).
   17. **Q3a answered (author, 03-11-2026):** the identifiers are client codes. With codes, the Q3
-      safeguard holds as long as no code sits inside another (e.g. codes of equal length); recorded
+      safeguard holds only as long as no code appears anywhere in another client's file name — inside
+      a longer code (`101` in `1010`) or elsewhere, such as a year: equal length is not enough (`202`
+      and `024` both pick up `101_GSTR3B_2024.pdf`, checked on dummy data); recorded
       next to rule R22 in the Brief. Where the audit inferred that client names are used as
       identifiers (Section 8, commit `bc73127`), the Brief now wins: client codes. Safety-net test
       T2 will use dummy client codes.
@@ -220,9 +222,10 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
       nothing built. Profiles (F21) already cover part of (2): Profile › Save Profile… writes a
       shareable file of the campaign settings. The author then widened (2), the same day: "not only
       profile, even the mail compose subject body and things" — the export also covers the Compose
-      tab's content and the saved email templates. (A profile already carries the current subject,
-      body and Universal BCC; the saved templates, saved lists and preferences cannot be exported
-      today.)
+      tab's subject, body and the like; whether the saved email templates go in too is Claude's
+      reading *(inferred — to confirm when picked up)*. (A profile already carries the current
+      subject, body and Universal BCC; the saved templates, saved lists and preferences cannot be
+      exported today.)
 - **Assumptions** (technical only — they stand unless the author objects):
   - A. The project tag in file names is `advanced_email_tool` (the repository's name).
   - B. The audit and the Brief describe `main` at commit `f5b9511` (v1.8.0).
@@ -299,8 +302,10 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
        Resume continues it.
     6. Keep the dummy workbook open in Excel, change and save it, click Refresh: the change appears
        (C2), and note that every recipient is ticked again (G19).
-    7. Where the app's folder and its `.app_data` live, and whether several users or OneDrive share
-       them (G24, G36).
+    7. ~~Where the app's folder and its `.app_data` live, and whether several users share them (G24,
+       G36).~~ Answered by the author (Q1): a shared folder on the office server, so every user shares
+       one `.app_data` (check 10 tests what that does). Still to note: whether OneDrive syncs that
+       folder on any PC (G36).
     8. ~~Whether any sending PC has New Outlook switched on (G37).~~ Answered by the author (Q2):
        classic Outlook on all sending PCs.
     9. A dummy copy of a workbook exported by your other software loads all its rows (G25).
@@ -315,7 +320,7 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
     13. **Two copies in Sent (Q16).** With dummy data, send one app email with one dummy client file
         to a colleague's address, from the usual account, and note: (a) where the "2" shows —
         Outlook's Sent Items, or Gmail in a browser or on a phone; (b) whether the colleague got one
-        copy or two; (c) whether the Universal BCC or CC holds the sending mailbox's own address;
+        copy or two (if two, note whether Resume Previous was clicked during the run: G43); (c) whether the Universal BCC or CC holds the sending mailbox's own address;
         (d) whether an email typed by hand in Outlook, with an attachment, from the same account,
         also shows "2"; (e) whether one app email with no attachment, and one from a Microsoft 365
         mailbox, show "2". One copy in (b) and a "2" in (d) mean Outlook and Gmail, not the app.
@@ -442,9 +447,27 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
 - **Discussed:** The author widened Parking Lot idea (2): "not only profile, even the mail compose
   subject body and things".
 - **Decided/Built:** The Parking Lot row and Decided 34 updated: the export covers the Compose tab's
-  subject and body (with pasted pictures — to check then) and the saved email templates, as well as
-  the profile settings. Not planned, not built.
+  subject, body and the like (with pasted pictures — to check then), as well as the profile
+  settings; whether the saved email templates go in too is Claude's reading *(inferred — to confirm
+  when picked up)*. Not planned, not built.
 - **Open:** the office-PC checks; the "to confirm when planned" points in the Brief.
+
+#### 03-11-2026 | Session 0 | Consistency check (after Message 19)
+- **Discussed:** Claude had the adoption documents read by three independent readers (numbering and
+  cross-references; facts against the code; faithfulness to the author's answers), each finding then
+  tested by a skeptic: 39 confirmed (several found twice), 14 rejected.
+- **Decided/Built:** Fixed in the Brief, this log, RESUME_CONTEXT, CLAUDE.md (lines 1-78 only) and
+  the audit. Corrections to what had been recorded: Q4's refusal covers Retry Failed as well as
+  Resume (Decided 14, Change 1, C15, F19); the Q3 safeguard needs codes that appear nowhere in
+  another client's file name — equal length is not enough (Decided 17, R22, G11); blank addresses
+  are not marked on the Excel tab and fail before Outlook (R4, Change 7); Decided 34 and Message 19
+  no longer present Claude's reading of "and things" as the author's; RESUME_CONTEXT's next action
+  now writes the Build Plan before the safety-net tests (CLAUDE.md: the Build Plan comes before any
+  code). New gap G43, reproduced by Claude: Resume Previous clicked during a run sends the emails
+  still pending twice (audit 7.1; Brief C3, F19, Section 6). Office-PC check 7 marked answered by
+  Q1, except OneDrive.
+- **Open:** whether and when to fix G43 (the fix itself needs no business choice); the office-PC
+  checks.
 
 ---
 
