@@ -52,7 +52,7 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
 - **Decisions:** [What was decided, and why]
 - **P-flags:** [From the plan and the coders' saved choices]
 - **Assumptions:** [Lettered — A, B, C…]
-- **Disputes:** [Each dispute, with Fable's ruling]
+- **Disputes:** [Each dispute, with the test writer's ruling]
 - **Break-it tests:** [What Codex's tests found, and what was done]
 - **Code review:** [Codex's findings, and the answers]
 - **Adversarial review:** [Findings and answers — or "declined"]
@@ -85,7 +85,7 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
     can reach clients (G31).
   - Not possible in this cloud session: opening the window, Outlook, Excel or the office share.
     What needs an office PC is listed under *Open*.
-- **Decided** (all by the author: 1-10 in the adoption request, 11-33 answering Q1-Q20, 34 later):
+- **Decided** (all by the author: 1-10 in the adoption request, 11-33 answering Q1-Q20, 34 and 35 later):
   1. Keep the app as it is: no rebuild, no new repository; all future changes happen in this one.
   2. This session adds documentation files only: no existing code file is changed, moved,
      reformatted or deleted.
@@ -95,6 +95,7 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
      existing app. The coding standards apply to new code and to the parts a change touches.
      Existing code is never rewritten just to meet them: ask me first."
   6. *How We Build* and the coding standards are copied word for word from `CLAUDE_TEMPLATE.md`.
+     (Since 13-11-2026 the Build Loop's *Roles* and nine-steps table differ from it: see 35.)
   7. No Build Plan now: one is written when the author asks for a change.
   8. `.build-docs/context/` is for dummy sample files only; never real client data in this repository.
   9. Safety-net tests that pin today's behaviour are proposed now (below), written later, and run
@@ -226,6 +227,18 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
       reading *(inferred — to confirm when picked up)*. (A profile already carries the current
       subject, body and Universal BCC; the saved templates, saved lists and preferences cannot be
       exported today.)
+  35. **The Build Loop's models changed (author, 13-11-2026):** "change the sub-phases models where
+      Opus 5.5 for coding to Fable 5.2 and where Fable 5.1 is there change it to Fable 5.2". Both Claude
+      roles of the Build Loop now run on Fable 5.2, the only Claude model used, sub-agents included;
+      Codex is unchanged. CLAUDE.md named the two roles after their models ("Opus" and "Fable", with no
+      version numbers), so with one model in both they are now named after their jobs: **the coder**
+      (was "Opus": plans, codes, answers reviews) and **the test writer** (was "Fable": writes the tests
+      first, settles disputes) — in CLAUDE.md's *Roles* and nine-steps table, and in this log's session
+      format. Two sentences of *Roles* no longer held: one was reworded and one removed. The new names
+      and that wording are Claude's (Assumptions J-L). This replaces Decided 6 for those two parts of
+      *How We Build*: they no longer match `CLAUDE_TEMPLATE.md` word for word. The toolkit's own
+      template is not in this repository and was not changed. What happens in each of the nine steps is
+      unchanged; no code changed.
 - **Assumptions** (technical only — they stand unless the author objects):
   - A. The project tag in file names is `advanced_email_tool` (the repository's name).
   - B. The audit and the Brief describe `main` at commit `f5b9511` (v1.8.0).
@@ -242,6 +255,16 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
     template says to when there is no design and no old screenshots.
   - H. Answers to the open questions are recorded in this Session 0 until Session 1 starts.
   - I. Markdown files use LF line endings (toolkit D23).
+  - J. (13-11-2026, Decided 35) The two Claude roles are named after their jobs, "the coder" and "the
+    test writer", because one model's name can no longer tell them apart.
+  - K. (13-11-2026, Decided 35) The test writer is always a separate sub-agent (a second copy of Claude
+    that starts with a clean slate) and works from the written files, never from the coder's
+    conversation. With the same model in both roles, this is what keeps the tests independent of the
+    coder; it replaces "A different model writes the tests, so a misreading the coder shares gets
+    caught." A blind spot the two share is left for Codex, a different model, to catch.
+  - L. (13-11-2026, Decided 35) "Keep its role narrow: it costs more and hits usage limits sooner" was
+    removed from *Roles*: Fable 5.2 now does all the Claude work, so the sentence no longer fits. By
+    its own reasoning, usage limits may now be reached sooner (Build Loop rule 6 says what to do then).
 - **Safety-net tests — approved by the author on 03-11-2026 (Q17, recommended answer taken;
   Decided 28); written as the first step of the first change.** Tests that pin what the app does **today**,
   written before the first change and run on every change. Dummy data only (made-up clients, PANs
@@ -468,6 +491,19 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
   Q1, except OneDrive.
 - **Open:** whether and when to fix G43 (the fix itself needs no business choice); the office-PC
   checks.
+
+#### 13-11-2026 | Session 0 | Message 20
+- **Discussed:** The author's request: "change the sub-phases models where Opus 5.5 for coding to
+  Fable 5.2 and where Fable 5.1 is there change it to Fable 5.2". Claude searched the repository: the
+  words "Opus 5.5" and "Fable 5.1" were in none of its files; the Build Loop in CLAUDE.md named its
+  two Claude roles "Opus" and "Fable", without version numbers (36 mentions — 21 and 15 — all in
+  *Roles* and the nine-steps table).
+- **Decided/Built:** Decided 35 and Assumptions J-L. Updated: CLAUDE.md (*Roles* and the nine-steps
+  table), the session format above (the *Disputes* line) and RESUME_CONTEXT. Documentation only: no
+  code file changed. Committed when the author said "commit it".
+- **Open:** whether the toolkit's own `CLAUDE_TEMPLATE.md` gets the same change, so that future
+  projects follow it (the author's call; it is not in this repository); whether and when to fix G43;
+  the office-PC checks; the "to confirm when planned" points in the Brief.
 
 ---
 

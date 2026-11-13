@@ -59,6 +59,11 @@
 - **New gap G43 (found 03-11-2026 by the consistency check, reproduced):** clicking Resume Previous
   while a run is still going sends every email still pending a second time. Not decided; the fix
   itself needs no business choice (Brief Section 6).
+- **Build Loop models changed (13-11-2026, the author):** both Claude roles now run on Fable 5.2, the
+  only Claude model used. CLAUDE.md names them by job: **the coder** (was "Opus") and **the test
+  writer** (was "Fable"; always a separate sub-agent that starts with a clean slate). *Roles* and the
+  nine-steps table therefore no longer match the toolkit's `CLAUDE_TEMPLATE.md` word for word
+  (Decisions Log, Session 0, Decided 35, Assumptions J-L). What happens in each step is unchanged.
 
 ## Exact next action
 
@@ -84,6 +89,8 @@
   Decisions Log; Changes 4-9 decided, not built; Q18 and Q19 added; office-PC checks 12 and 13 added.
 - 03-11-2026 | Session 0 questions Q18-Q20 | done | Answers recorded in the Brief, CLAUDE.md and the
   Decisions Log; Changes 10-12 decided, not built; gap G42 added to the audit.
+- 13-11-2026 | Build Loop models | done | Both Claude roles now run on Fable 5.2: CLAUDE.md *Roles* and
+  the nine-steps table name them "the coder" and "the test writer" (Decided 35); no code changed.
 
 ## Hard-won lessons
 
