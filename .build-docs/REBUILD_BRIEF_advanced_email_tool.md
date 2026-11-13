@@ -533,6 +533,11 @@ for you to decide.*
   built.
 - G37 — classic Outlook only: every sending PC uses it today (Q2), so this is a future risk — it
   would bite only if a PC moved to New Outlook.
+- G44-G143 — found on 13-11-2026 by the bug hunt (the whole app read again, file by file, by Claude
+  and by Codex): 100 further defects, 28 of them HIGH. Built as they are worded today, Changes 1-12
+  would repair one of them fully (G61, by Change 3) and 26 partly; 29 need a decision from you
+  first. **None decided yet** — the index, your questions and a suggested order of repair are in
+  `BUG_HUNT_advanced_email_tool.md`, the full entries in `BUG_HUNT_details_advanced_email_tool.md`.
 
 *Seen in use (Q16, 03-11-2026) — not one of the audit's gaps, and probably not the app:*
 - **Emails sent with client files show twice in Sent.** A "2" appears beside each one, and opening

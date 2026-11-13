@@ -272,6 +272,15 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
     the Claude Code installed here (2.1.318 and 2.1.323): its read-only search helper runs on Opus when
     the session runs Fable, and the codex-rescue helper's own file names Sonnet, so the line "the only
     Claude model used, sub-agents included" needs this.
+  - N. (13-11-2026, the bug hunt) The defects found by the bug hunt continue the audit's gap numbers
+    (G44-G143) but are kept in three new files, `BUG_HUNT_…`, with a short pointer in the audit
+    (Section 7.10) and in the Brief (Section 6): the audit keeps describing the app at adoption.
+  - O. (13-11-2026, the bug hunt) "Share it with Codex" was taken to mean the tracked files only:
+    Codex worked on clean copies without `.app_data`, which holds real client addresses. Every
+    experiment, Claude's too, ran in a throwaway copy with Outlook blocked and made-up clients.
+  - P. (13-11-2026, the bug hunt) The small scripts that reproduced the defects were not added to
+    this repository; each entry gives the steps. They are lost with the session unless the author
+    asks for them to be saved.
 - **Safety-net tests — approved by the author on 03-11-2026 (Q17, recommended answer taken;
   Decided 28); written as the first step of the first change.** Tests that pin what the app does **today**,
   written before the first change and run on every change. Dummy data only (made-up clients, PANs
@@ -531,6 +540,39 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
   limits may be reached sooner; "Coder" and "Codex" differ by one letter in the *Who* column
   (Assumption J leaves the names to the author); CLAUDE.md now names a version, "Fable 5.2", which
   will need updating at the next release; the toolkit's other files may name the old roles too.
+
+#### 13-11-2026 | Session 0 | Message 21
+- **Discussed:** The author's request: "Now read all the files and share it too with Codex and find
+  out the bugs and list them for fixing". A bug hunt over the whole app, with nothing changed in it:
+  ten Claude readers (Fable 5.2) read every code file, 217 findings; Codex read every code file in
+  three read-only jobs, 60 findings (model gpt-6-astra, effort ultra, as set in its config and
+  checked in its session logs; a first attempt failed because its sign-in had expired, and it ran
+  after the author signed in again); 26 independent checkers then tried to refute 58 of the claims
+  and re-ran them on dummy data: 55 reproduced, 1 confirmed by reading the code, 2 narrower than
+  claimed, none refuted. The existing tests were run first in a throwaway copy: 82 passed (Windows
+  11, Python 3.14.10), the first run on Windows.
+- **Decided/Built:** Three new files in `.build-docs`: `BUG_HUNT_advanced_email_tool.md` (summary,
+  index, the author's questions, a suggested order of repair),
+  `BUG_HUNT_details_advanced_email_tool.md` (the full entries) and
+  `BUG_HUNT_codex_reports_advanced_email_tool.md` (Codex's reports word for word). 100 further
+  defects, G44-G143: 28 HIGH, 39 MEDIUM, 33 LOW; 77 new and 23 that extend a known gap; 3 notes on
+  weak tests; one correction to the audit (G13 cannot happen through the window). Pointers added to
+  the audit (7.10), the Brief (Section 6), CLAUDE.md and RESUME_CONTEXT (with lessons 14-17).
+  Assumptions N, O and P. Documentation only: no code file changed, nothing decided, nothing built.
+- **Open:** which of G44-G143 to fix and in what order (the author's call; a suggested order is in
+  the bug-hunt file, Section 7); the 29 questions in its Section 5, asked again one at a time when
+  a change is planned; whether the reproduction scripts should be saved (Assumption P); whether and
+  when to fix G43; the office-PC checks; the "to confirm when planned" points in the Brief.
+
+#### 13-11-2026 | Session 0 | Message 22
+- **Discussed:** The author's reply to the bug list: "atleast commit them so that it is not lost. if
+  you want to branch out from here, your wish".
+- **Decided/Built:** The bug hunt's three files and its pointers committed as one documentation
+  change on `adopt-toolkit`. No new branch (Claude's choice, left to it by the author): these are
+  documents of the same kind as the rest of this branch; a branch of its own is worth making when
+  the first repair starts, because that is when code changes. Not pushed to GitHub.
+- **Open:** as in Message 21; and whether to push the branch to GitHub (the author's call: the
+  files list the app's weak points, which matters if the repository can be seen by others).
 
 ---
 

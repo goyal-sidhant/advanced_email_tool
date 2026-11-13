@@ -51,6 +51,10 @@ technical jargon — explain it on first use.
 - `.build-docs/REBUILD_BRIEF_advanced_email_tool.md` — The app as it works today: my
   decisions, the Contracts (C1, C2, …) and the questions only I can answer, with my answers. Every
   change starts here
+- `.build-docs/BUG_HUNT_advanced_email_tool.md` — The bug hunt of 13-11-2026: 100 further
+  defects (G44–G143), my questions and a suggested order of repair. The full entries are in
+  `BUG_HUNT_details_advanced_email_tool.md`; Codex's reports, word for word, in
+  `BUG_HUNT_codex_reports_advanced_email_tool.md`. Nothing in them is decided until I say so
 - `.build-docs/BUILD_PLAN.md` — The Build Plan: tracker, structure, phases and sub-phases,
   change log. Always written and saved before any code — even in auto mode. Not
   written yet: one is written when I ask for a change
@@ -71,8 +75,10 @@ Adopted into the toolkit (Session 0, 03-11-2026): documentation only, no code
 changed; the app is at v1.8.0 (commit f5b9511). Questions Q1-Q20 answered; Changes
 1-12 are decided in the Brief but not built. No change in progress. A gap found
 later, G43 (Resume clicked during a run sends the pending emails twice), awaits my
-call. Next: the office-PC checks (Decisions Log, Session 0), then a Build Plan when
-I ask for a change.
+call. So do the 100 further defects (G44-G143, 28 of them HIGH) listed by the bug
+hunt of 13-11-2026, with 29 questions for me
+(`.build-docs/BUG_HUNT_advanced_email_tool.md`). Next: the office-PC checks
+(Decisions Log, Session 0), then a Build Plan when I ask for a change.
 > Once the build starts: Sub-phase [N.M] [name] · Step [.K] [step name] · [status].
 > Updated at the end of every step (Build Loop rule 1).
 

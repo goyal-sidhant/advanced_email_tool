@@ -828,6 +828,20 @@ could go to the wrong person; **MEDIUM** = wrong content, lost work or a mislead
 - Commit `bc73127` says "Column name matching works regardless of case" — true for To/CC/BCC, sheets
   and filters, **not** for template variables or identifier columns.
 
+### 7.10 Found later: the bug hunt of 13-11-2026 (G44-G143)
+The whole app was read again on 13-11-2026, file by file, by Claude and by Codex, and the findings
+were re-checked on dummy data. It found 100 further defects, numbered **G44 to G143** (28 HIGH, 39
+MEDIUM, 33 LOW); 23 of them are gaps listed above with a further cause or a worse result. They are
+not repeated here: `BUG_HUNT_advanced_email_tool.md` holds the index, the questions for the author
+and a suggested order of repair; `BUG_HUNT_details_advanced_email_tool.md` holds the full entries;
+`BUG_HUNT_codex_reports_advanced_email_tool.md` holds Codex's reports word for word.
+
+One correction to this section came out of the hunt: **G13 cannot happen through the window.** When
+a saved mapping is put back, the app finds the heading ignoring capitals and selects the workbook's
+own spelling in the drop-down, and the emails are built from what the drop-down shows, so each
+client still gets their files. The capital-sensitive lookup G13 describes exists in the code that
+builds the emails, but the window never hands it a wrongly capitalised heading.
+
 ---
 
 ## SECTION 8: DESIGN DECISIONS (INFERRED)

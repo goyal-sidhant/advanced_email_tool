@@ -12,7 +12,8 @@
   `.build-docs/DECISIONS_LOG.md`; this file; `.build-docs/readme_template.md`;
   `.build-docs/context/.gitkeep`.
 - **Test suite:** 82 passed (Linux, Python 3.13, PyQt5 5.15.11 off-screen, Outlook faked) on
-  03-11-2026. Not yet run on an office PC.
+  03-11-2026. Also 82 passed on the author's own PC on 13-11-2026 (Windows 11, Python 3.14.10,
+  PyQt5 5.15.11 off-screen), in a throwaway copy with Outlook blocked. Not yet run on an office PC.
 - **No Build Plan** (`.build-docs/BUILD_PLAN.md` does not exist): one is written when the author asks
   for a change.
 - **Questions Q1-Q20 answered on 03-11-2026** (Brief Section 10; Decisions Log, Session 0, Decided
@@ -55,9 +56,11 @@
   service (OAuth), and exporting and importing the app's settings (Brief Section 9). Not planned.
 - **Open:** no business question is waiting. The office-PC checks (Decisions Log, Session 0, *Open*:
   checks 1-13; check 8 answered, check 7 answered by Q1 except OneDrive); the "to confirm when
-  planned" points in the Brief, asked when their change is planned; whether and when to fix G43; and
-  whether the toolkit's own `CLAUDE_TEMPLATE.md` gets the change of Build Loop models described
-  below, so that future projects follow it (the author's call; it is not in this repository).
+  planned" points in the Brief, asked when their change is planned; whether and when to fix G43;
+  which of the bug hunt's defects G44-G143 to fix, and in what order, with its 29 questions for
+  the author (described below); and whether the toolkit's own `CLAUDE_TEMPLATE.md` gets the change
+  of Build Loop models described below, so that future projects follow it (the author's call; it
+  is not in this repository).
 - **New gap G43 (found 03-11-2026 by the consistency check, reproduced):** clicking Resume Previous
   while a run is still going sends every email still pending a second time. Not decided; the fix
   itself needs no business choice (Brief Section 6).
@@ -66,6 +69,16 @@
   writer** (was "Fable"; always a separate sub-agent that starts with a clean slate). *Roles* and the
   nine-steps table therefore no longer match the toolkit's `CLAUDE_TEMPLATE.md` word for word
   (Decisions Log, Session 0, Decided 35, Assumptions J-M). What happens in each step is unchanged.
+- **Bug hunt done (13-11-2026, at the author's request):** the whole app was read again, file by
+  file, by ten Claude readers and by Codex, and the findings were re-checked on dummy data by
+  independent checkers. Result: 100 further defects, **G44 to G143** (28 HIGH, 39 MEDIUM, 33 LOW),
+  3 notes on weak tests, and one correction to the audit (G13 cannot happen through the window).
+  Nothing decided, nothing built, no code changed. `BUG_HUNT_advanced_email_tool.md` holds the
+  index, the author's 29 questions and a suggested order of repair;
+  `BUG_HUNT_details_advanced_email_tool.md` holds the full entries;
+  `BUG_HUNT_codex_reports_advanced_email_tool.md` holds Codex's reports word for word. The worst
+  group is the record of a run: after a run stops, Resume Previous skips the clients whose emails
+  failed and Retry Failed drops the clients not yet tried (G44, G45).
 
 ## Exact next action
 
@@ -78,6 +91,9 @@
      commit it; once the author approves it, its first step writes and commits the approved
      safety-net tests T1-T7 (Decided 28), which must pass on today's code; then run the change
      through the Build Loop in CLAUDE.md — one step per "next".
+   - when the change repairs a bug-hunt defect (G44-G143), read its full entry in
+     `BUG_HUNT_details_advanced_email_tool.md` first, and ask its "Your call" question before the
+     plan depends on it. The entry's line numbers are for v1.8.0.
 
 ## Step status
 
@@ -93,6 +109,9 @@
   Decisions Log; Changes 10-12 decided, not built; gap G42 added to the audit.
 - 13-11-2026 | Build Loop models | done | Both Claude roles now run on Fable 5.2: CLAUDE.md *Roles* and
   the nine-steps table name them "the coder" and "the test writer" (Decided 35); no code changed.
+- 13-11-2026 | Bug hunt | done | The whole app read by Claude and by Codex, findings re-checked on
+  dummy data: 100 further defects G44-G143 listed in three `BUG_HUNT_…` files; none decided; no code
+  changed; 82 tests passed on Windows in a throwaway copy.
 
 ## Hard-won lessons
 
@@ -131,3 +150,19 @@ From the git history (each was a real failure in use) and from the adoption audi
     `set_emails()`, which shows Resume Previous whenever the checkpoint is "in progress" — also while
     a run is going — and nothing stops a second sender (G43). Any change to the Send tab must keep
     one run at a time.
+14. **On the author's PC the real Outlook is within reach.** `pywin32` and classic Outlook are
+    installed there, and the project folder holds a real `.app_data`. Never run the app, the tests or
+    an experiment in the project folder: copy the tracked files elsewhere (`git archive`), and put
+    two small stand-in files at the root of the copy, `win32com/__init__.py` and `pythoncom.py`, each
+    raising ImportError. Run from that root and they take the place of the real ones, so nothing can
+    reach Outlook; the 82 tests pass that way. The bug hunt of 13-11-2026 worked like this.
+15. **Give Codex a clean copy, not the project folder.** A copy made with `git archive` holds the
+    tracked files only, so `.app_data` (real client addresses) is never within its reach. One copy
+    per job lets several Codex jobs run at once.
+16. **Codex's sign-in can run out.** A job then ends within 20 seconds with "Your access token could
+    not be refreshed"; only the author can sign in again (`codex login`). The companion's `setup`
+    check still said "not logged in" after the sign-in worked: start a real job to find out.
+17. **The Send tab's list is built when the tab is opened, and three buttons act on it later.**
+    Start, Resume Previous and Retry Failed all use that stored list and the stored row numbers
+    (G44-G48, G74, G78). Any repair there should build the list afresh at the click and keep one
+    record of the run.
