@@ -139,14 +139,16 @@ Loop, which every sub-phase of that plan goes through.
   It keeps the Decisions Log, RESUME_CONTEXT and the git commits, and runs every multi-agent workflow.
 - **The test writer** (Fable 5.2 as well, but always a separate sub-agent: a second copy of Claude that starts
   with a clean slate) writes the tests **before** any code exists and settles every disagreement. It works from
-  the written files, never from the coder's conversation. Both are the same model, so that clean slate is what
+  the written files, never from the coder's conversation: the message the coder starts it with names the step
+  and the files to read, and never retells or explains them. Both are the same model, so that clean slate is what
   keeps the tests independent of the coder; a blind spot the two share is for Codex, a different model, to catch.
 - **Codex** (ChatGPT, on the author's OpenAI quota) checks each plan, writes the break-it tests and reviews the code.
   - It must run the model and effort set in `~/.codex/config.toml`. **Never pass `--model` or `--effort`.**
     If Codex reports any other model or effort, the break-it tests go back to the test writer.
   - Drive Codex **from Bash through the codex-companion script** (or through the codex-rescue agent with its
     model set to Fable 5.2). Never through a Sonnet wrapper. Fable 5.2 is the only Claude model used,
-    sub-agents included.
+    sub-agents included: the coder states the model each time it starts a sub-agent, because some of
+    Claude Code's ready-made helpers otherwise run on a different model.
   - **Never rush Codex.** Run it in the background with no time limit, and poll
     `status <job> --wait --timeout-ms 540000` until it ends. The 9-minute poll is only a tool limit,
     never a limit on Codex. Fetch the output with `result <job>`.
@@ -154,8 +156,9 @@ Loop, which every sub-phase of that plan goes through.
     or `~/.codex/logs_2.sqlite`), and record it.
   - **Word Codex briefs plainly** ("damaged or unusual files", not "hostile", "attack" or "zip bomb"),
     or OpenAI's content filter may stop the run. If it does stop, resume the same session once.
-- **The coder may never edit, skip, weaken or delete a test written by the test writer or by Codex.** If it
-  believes a test is wrong, it leaves the test red, logs a dispute, and the test writer decides.
+- **The coder may never edit, skip, weaken or delete a test written by the test writer or by Codex.** The same
+  ban holds for a checker, a fixer and any other sub-agent the coder starts, except the test writer. If the
+  coder believes a test is wrong, it leaves the test red, logs a dispute, and the test writer decides.
 
 ### Rules for every step
 1. **One step per "next".** Each step ends with: a checkpoint commit (Standard 10; the commit guarded so it never

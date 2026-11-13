@@ -235,8 +235,8 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
       (was "Opus": plans, codes, answers reviews) and **the test writer** (was "Fable": writes the tests
       first, settles disputes) — in CLAUDE.md's *Roles* and nine-steps table, and in this log's session
       format. Two sentences of *Roles* no longer held: one was reworded and one removed. The new names
-      and that wording are Claude's (Assumptions J-L). This replaces Decided 6 for those two parts of
-      *How We Build*: they no longer match `CLAUDE_TEMPLATE.md` word for word. The toolkit's own
+      and that wording are Claude's (Assumptions J-M). This replaces Decided 6 for *Roles* and the
+      nine-steps table: they no longer match `CLAUDE_TEMPLATE.md` word for word. The toolkit's own
       template is not in this repository and was not changed. What happens in each of the nine steps is
       unchanged; no code changed.
 - **Assumptions** (technical only — they stand unless the author objects):
@@ -256,15 +256,22 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
   - H. Answers to the open questions are recorded in this Session 0 until Session 1 starts.
   - I. Markdown files use LF line endings (toolkit D23).
   - J. (13-11-2026, Decided 35) The two Claude roles are named after their jobs, "the coder" and "the
-    test writer", because one model's name can no longer tell them apart.
+    test writer", because one model's name can no longer tell them apart. The ban on changing the test
+    writer's and Codex's tests named a model ("Opus"), so it also held for every sub-agent on that model;
+    a second sentence now says the same for every sub-agent the coder starts, except the test writer.
   - K. (13-11-2026, Decided 35) The test writer is always a separate sub-agent (a second copy of Claude
     that starts with a clean slate) and works from the written files, never from the coder's
-    conversation. With the same model in both roles, this is what keeps the tests independent of the
-    coder; it replaces "A different model writes the tests, so a misreading the coder shares gets
-    caught." A blind spot the two share is left for Codex, a different model, to catch.
+    conversation: the message the coder starts it with names the step and the files to read, and never
+    retells or explains them. With the same model in both roles, this is what keeps the tests
+    independent of the coder; it replaces "A different model writes the tests, so a misreading the coder
+    shares gets caught." A blind spot the two share is left for Codex, a different model, to catch.
   - L. (13-11-2026, Decided 35) "Keep its role narrow: it costs more and hits usage limits sooner" was
     removed from *Roles*: Fable 5.2 now does all the Claude work, so the sentence no longer fits. By
     its own reasoning, usage limits may now be reached sooner (Build Loop rule 6 says what to do then).
+  - M. (13-11-2026, Decided 35) The coder states the model each time it starts a sub-agent. Checked in
+    the Claude Code installed here (2.1.318 and 2.1.323): its read-only search helper runs on Opus when
+    the session runs Fable, and the codex-rescue helper's own file names Sonnet, so the line "the only
+    Claude model used, sub-agents included" needs this.
 - **Safety-net tests — approved by the author on 03-11-2026 (Q17, recommended answer taken;
   Decided 28); written as the first step of the first change.** Tests that pin what the app does **today**,
   written before the first change and run on every change. Dummy data only (made-up clients, PANs
@@ -504,6 +511,26 @@ ends, an exchange entry after every response, and the session entry at .9 Close.
 - **Open:** whether the toolkit's own `CLAUDE_TEMPLATE.md` gets the same change, so that future
   projects follow it (the author's call; it is not in this repository); whether and when to fix G43;
   the office-PC checks; the "to confirm when planned" points in the Brief.
+
+#### 13-11-2026 | Session 0 | Consistency check (after Message 20)
+- **Discussed:** Claude had the change of Build Loop models read by four independent readers (a cold
+  reader; faithfulness to the old text and to the request; consistency across the documents; whether
+  the method still works with one model in both roles), each finding then tested by a skeptic: of 30
+  findings, 5 confirmed, 13 true but left as they are (to tell the author), 12 rejected.
+- **Decided/Built:** The 5 confirmed ones fixed in CLAUDE.md (*Roles*), here and in RESUME_CONTEXT:
+  the ban on changing the test writer's and Codex's tests again covers every sub-agent the coder
+  starts (Assumption J); the message that starts the test writer names the step and the files and
+  never retells them (Assumption K); the coder states the model for every sub-agent (new Assumption
+  M); Decided 35 names the two parts that left the template; RESUME_CONTEXT's *Open* names the
+  toolkit question. Documentation only: no code file changed.
+- **Open — told to the author as consequences of Decided 35, nothing changed for them:** the first
+  tests, the re-count on real data and every ruling on a dispute now come from the same model as the
+  code, and Codex is the only different model left; if Codex ever runs on the wrong model or effort,
+  the break-it tests fall to that same model too; Fable 5.2's list price is twice Opus 5.5's ($8 and
+  $40 against $4 and $20 per million tokens, Claude Code's own price list of 03-11-2026), so usage
+  limits may be reached sooner; "Coder" and "Codex" differ by one letter in the *Who* column
+  (Assumption J leaves the names to the author); CLAUDE.md now names a version, "Fable 5.2", which
+  will need updating at the next release; the toolkit's other files may name the old roles too.
 
 ---
 

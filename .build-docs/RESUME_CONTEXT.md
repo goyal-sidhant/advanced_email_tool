@@ -55,7 +55,9 @@
   service (OAuth), and exporting and importing the app's settings (Brief Section 9). Not planned.
 - **Open:** no business question is waiting. The office-PC checks (Decisions Log, Session 0, *Open*:
   checks 1-13; check 8 answered, check 7 answered by Q1 except OneDrive); the "to confirm when
-  planned" points in the Brief, asked when their change is planned; and whether and when to fix G43.
+  planned" points in the Brief, asked when their change is planned; whether and when to fix G43; and
+  whether the toolkit's own `CLAUDE_TEMPLATE.md` gets the change of Build Loop models described
+  below, so that future projects follow it (the author's call; it is not in this repository).
 - **New gap G43 (found 03-11-2026 by the consistency check, reproduced):** clicking Resume Previous
   while a run is still going sends every email still pending a second time. Not decided; the fix
   itself needs no business choice (Brief Section 6).
@@ -63,7 +65,7 @@
   only Claude model used. CLAUDE.md names them by job: **the coder** (was "Opus") and **the test
   writer** (was "Fable"; always a separate sub-agent that starts with a clean slate). *Roles* and the
   nine-steps table therefore no longer match the toolkit's `CLAUDE_TEMPLATE.md` word for word
-  (Decisions Log, Session 0, Decided 35, Assumptions J-L). What happens in each step is unchanged.
+  (Decisions Log, Session 0, Decided 35, Assumptions J-M). What happens in each step is unchanged.
 
 ## Exact next action
 
